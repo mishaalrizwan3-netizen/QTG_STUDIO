@@ -102,15 +102,15 @@ def apply_manual_conditions(window,values):
     sim.pause_sim()
     if not sim.wait_for_paused(3.):raise RuntimeError('Simulator did not confirm pause.')
     if window.stop_worker_event.is_set():raise RuntimeError('Manual initialization cancelled.')
-    if not sim.set_initial_flaps(cfg['flaps']):raise RuntimeError('Initial flaps rejected.')
     from replay_support import reference_weather_metar
     metar=reference_weather_metar({'altitude_msl':cfg['alt_ft'],'oat':cfg['temperature_c']},sim.get_global_weather_metar())
     if metar and not sim.set_global_weather_metar(metar):raise RuntimeError('Initial temperature rejected.')
     if not sim.queue_position_airborne(alt_ft=cfg['alt_ft'],speed_kts=cfg['ias_kt'],pitch_deg=0.,bank_deg=0.,hdg_deg=0.,lat=cfg['lat'],lon=cfg['lon'],on_ground=cfg['on_ground']):raise RuntimeError('Initial position rejected.')
     window._wait_for_initial_altitude(cfg['alt_ft'])
-    # INITPOSITION and aircraft reload handling can reset power. Apply it after
-    # position readback, then wait for fresh telemetry; never drive it in flight.
+    # INITPOSITION and aircraft reload handling can reset power and flap handles.
+    # Apply them after position readback, then wait for fresh telemetry; never drive it in flight.
     if not sim.set_initial_throttle(cfg['throttle']):raise RuntimeError('Initial throttle rejected.')
+    if not sim.set_initial_flaps(cfg['flaps']):raise RuntimeError('Initial flaps rejected.')
     checks=[('pressure_alt',cfg['alt_ft'],25),('plane_latitude',cfg['lat'],.001),('plane_longitude',cfg['lon'],.001),('measured_flaps_handle_index',cfg['flaps'],.1),('engine_throttle_percent',cfg['throttle'],1)]
     deadline=time.monotonic()+3.
     while True:
@@ -123,8 +123,13 @@ def apply_manual_conditions(window,values):
                 mismatches.append(f'{key}: requested {target:g}, actual {measured:g}')
         if not mismatches:break
         if time.monotonic()>=deadline:
-            hint=' Check the physical throttle position and simulator throttle-axis assignments.' if any('engine_throttle_percent' in item for item in mismatches) else ''
+            hints=['Check physical throttle position and simulator throttle-axis assignments.'] if any('engine_throttle_percent' in item for item in mismatches) else []
+            if any('measured_flaps_handle_index' in item for item in mismatches): hints.append('Check physical cockpit flap switch is set to 0 (UP).')
+            hint=(' ' + ' '.join(hints)) if hints else ''
             raise RuntimeError('Manual initial-condition mismatch: '+ '; '.join(mismatches)+'.'+hint)
+        if any('measured_flaps_handle_index' in item for item in mismatches):
+            try: sim.set_initial_flaps(cfg['flaps'])
+            except Exception: pass
         window.stop_worker_event.wait(.05)
     return actual
 

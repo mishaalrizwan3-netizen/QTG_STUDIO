@@ -85,8 +85,11 @@ def run_initialization(window, mode, entry, policy=None):
                 hdg_deg=0.,lat=cfg.get('lat',32.235),lon=cfg.get('lon',74.135))
             window._wait_for_initial_altitude(cfg['alt_ft'])
             if not sim.wait_for_paused(3.):raise RuntimeError('Simulator did not confirm pause.')
-            if not sim.set_flaps_handle_index(cfg['flaps']):raise RuntimeError('Initial flaps rejected.')
             if not sim.set_initial_throttle(cfg['throttle']):raise RuntimeError('Initial throttle rejected.')
+            if hasattr(sim, 'set_initial_flaps'):
+                sim.set_initial_flaps(cfg['flaps'])
+            if hasattr(sim, 'set_flaps_handle_index'):
+                sim.set_flaps_handle_index(cfg['flaps'])
             if window.stop_worker_event.is_set():raise RuntimeError('Engine initialization cancelled.')
             actual=window._refresh_paused_telemetry()
             for key,target,tolerance in [('pressure_alt',cfg['alt_ft'],25.),('airspeed_indicated',cfg['ias_kt'],2.),

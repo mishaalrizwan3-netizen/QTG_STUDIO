@@ -6,7 +6,7 @@ Official EASA CS-FSTD(A) Issue 2 performance validation test for piston engine t
 
 | Parameter | Default Value | Notes |
 | :--- | :--- | :--- |
-| **Flight Condition** | Ground | Ground run / static trim |
+| **Flight Condition** | Approach or Landing | Airborne SEP profile |
 | **Altitude MSL** | 2000 ft | |
 | **Indicated Airspeed (IAS)** | 80 kts | |
 | **Flaps** | 0 | |

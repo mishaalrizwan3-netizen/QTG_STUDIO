@@ -2,7 +2,7 @@
 TEST_REFERENCE = '1.f.(2)'
 USE_SETTLED_REFERENCE_ALTIMETER = True
 DEFAULT_CONDITIONS = {
-    "Flt cond": "Ground",
+    "Flt cond": "Approach or Landing",
     "Alt[ft]": "2000",
     "IAS[kts]": "80",
     "Flaps": "0",
