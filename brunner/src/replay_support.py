@@ -234,3 +234,13 @@ def reference_weather_metar(snapshot, current_metar):
     if temperature is not None and not temp_done:raise ValueError('Current weather has no supported temperature observation')
     if wind is None and separator:result.extend(['@@@',aloft])
     return ' '.join(result)
+
+
+def startup_rpm_tolerance(test_reference):
+    """Startup allowance only; never a tolerance for formal QTG results.
+
+    Normal climb can begin during a power transient. Requiring its first
+    instantaneous RPM to be a two-second equilibrium prevents replay at the
+    correctly restored throttle. Keep engine-response and unknown tests strict.
+    """
+    return 100.0 if test_reference == '1.c.(1)' else 10.0

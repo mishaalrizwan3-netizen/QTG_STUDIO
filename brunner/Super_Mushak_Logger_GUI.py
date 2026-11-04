@@ -46,7 +46,7 @@ if SRC_DIR not in sys.path:
 from brunner_interface import BrunnerInterface
 from p3d_simconnect_v15 import SimConnectClient
 import plot_graphs
-from replay_support import reference_weather_metar, ThrottleReplay, reference_altimeter_offset, estimate_replay_lead, replay_feedforward, interpolate_reference, build_dynamic_state, BrunnerPositionTracker, validate_initial_airspeed, validate_reference_power
+from replay_support import startup_rpm_tolerance, reference_weather_metar, ThrottleReplay, reference_altimeter_offset, estimate_replay_lead, replay_feedforward, interpolate_reference, build_dynamic_state, BrunnerPositionTracker, validate_initial_airspeed, validate_reference_power
 
 # =====================================================================
 # CONSTANTS & STAGES
@@ -864,6 +864,9 @@ class SuperMushakLoggerApp(QMainWindow):
                 self._restore_reference_state()
                 print("[Auto Prep Step 4/5] Prepar3D initial state restored and confirmed while paused.", flush=True)
 
+                if getattr(self, '_session_context', {}).get('test_reference') in ('1.f.(1)', '1.f.(2)'):
+                    self._restore_reference_engine_rpm()
+
                 # STEP 5: Final verification
                 print("[Auto Prep Step 5/5] Final verification: rechecking BRUNNER and Prepar3D readiness...", flush=True)
                 self._settle_reference_controls()
@@ -880,7 +883,8 @@ class SuperMushakLoggerApp(QMainWindow):
                 target_rpm = self.ref_manual_snapshot.get("rpm")
                 if target_rpm is not None:
                     rpm = float(tele.get("engine_rpm", float("nan")))
-                    if not math.isfinite(rpm) or abs(rpm-float(target_rpm)) > 10.0:
+                    tolerance = startup_rpm_tolerance(getattr(self, '_session_context', {}).get('test_reference'))
+                    if not math.isfinite(rpm) or abs(rpm-float(target_rpm)) > tolerance:
                         raise RuntimeError("Engine RPM changed after settling; Automatic recording remains blocked.")
                 print(f"[Auto Prep Step 5/5] Ready for Replay! P3D paused: MSL={tele.get('pressure_alt', 0):.0f}ft, indicated={tele.get('indicated_altitude', 0):.0f}ft, IAS={tele.get('airspeed_indicated', 0):.1f}kt. Stick: P={chk_p:+.3f}, R={chk_r:+.3f}, Y={chk_y:+.3f}.", flush=True)
 
@@ -1066,8 +1070,79 @@ class SuperMushakLoggerApp(QMainWindow):
                 if time.monotonic() >= deadline:
                     raise
 
+    def _restore_reference_engine_rpm(self):
+        """Reach transient RPM naturally; restore recorded inputs before release."""
+        if getattr(self, '_session_context', {}).get('test_reference') not in ('1.f.(1)', '1.f.(2)'):
+            return
+        if self.stop_worker_event.is_set():
+            raise RuntimeError('Engine initialization cancelled.')
+        sim = self.p3d
+        snapshot = self.ref_manual_snapshot
+        target = float(snapshot.get('rpm', float('nan')))
+        prop_target = float((snapshot.get('telemetry', {}).get('prop_rpms') or [target])[0])
+        if not all(math.isfinite(v) and 300 <= v <= 4000 for v in (target, prop_target)):
+            raise ValueError('Invalid Manual starting engine/prop RPM.')
+        if abs(target-prop_target) > 10.0:
+            raise ValueError('Recorded engine/prop RPM do not match this direct-drive aircraft.')
+        if not sim or not sim.is_connected() or not sim.wait_for_paused(3.0):
+            raise RuntimeError('Connected, paused P3D is required for engine preparation.')
+        def readings(fresh):
+            return float(fresh.get('engine_rpm', float('nan'))), float((fresh.get('prop_rpms') or [float('nan')])[0])
+        def matches(engine, prop):
+            return all(math.isfinite(v) for v in (engine, prop)) and abs(engine-target) <= 10 and abs(prop-prop_target) <= 10
+        engine, prop = readings(self._refresh_paused_telemetry())
+        if not all(math.isfinite(v) and v > 300 for v in (engine,prop)):
+            raise RuntimeError('Running engine RPM is unavailable during pre-roll.')
+        if not matches(engine,prop):
+            deadline = time.monotonic()+20.0
+            throttle = float(snapshot['throttle'])
+            print(f'[Auto Prep] Natural engine pre-roll to {target:.1f} RPM; timer remains zero.', flush=True)
+            try:
+                sim.unpause_sim()
+                while time.monotonic() < deadline:
+                    if self.stop_worker_event.is_set():
+                        raise RuntimeError('Engine initialization cancelled.')
+                    if not sim.is_connected():
+                        raise RuntimeError('P3D disconnected during engine pre-roll.')
+                    throttle = max(0.0, min(100.0, throttle+(target-engine)*0.025))
+                    if not sim.set_replay_throttle(throttle):
+                        raise RuntimeError('P3D rejected engine pre-roll throttle.')
+                    sequence = sim.get_telemetry_sequence()
+                    if not sim.request_telemetry_once():
+                        raise RuntimeError('P3D rejected pre-roll telemetry request.')
+                    fresh = sim.wait_for_fresh_telemetry(sequence,1.5)
+                    if fresh is None:
+                        raise RuntimeError('No fresh engine pre-roll telemetry.')
+                    engine, prop = readings(fresh)
+                    if not all(math.isfinite(v) and v > 300 for v in (engine,prop)):
+                        raise RuntimeError('Running engine RPM is unavailable during pre-roll.')
+                    if matches(engine,prop):
+                        break
+                    time.sleep(.04)
+                else:
+                    raise RuntimeError(f'Natural engine pre-roll timed out: engine={engine:.1f}, Manual={target:.1f}.')
+            finally:
+                sim.pause_sim()
+                if not sim.wait_for_paused(3.0):
+                    raise RuntimeError('P3D did not confirm pause after engine pre-roll.')
+                if not sim.set_initial_throttle(float(snapshot['throttle'])):
+                    raise RuntimeError('P3D rejected recorded throttle restoration after pre-roll.')
+            self._restore_reference_state()
+            self._prepare_reference_power()
+            engine, prop = readings(self._refresh_paused_telemetry())
+        if not matches(engine,prop):
+            raise RuntimeError(f'Engine pre-roll failed paused readback: engine={engine:.1f}, prop={prop:.1f}, Manual={target:.1f}.')
+        self._session_context['rpm_startup_readiness'] = dict(
+            policy='natural throttle pre-roll; recorded throttle restored paused',
+            reference_engine_rpm=target, actual_engine_rpm=engine,
+            actual_prop_rpm=prop, tolerance_rpm=10.0)
+        print(f'[Auto Prep] Engine starting state verified: engine={engine:.1f}, prop={prop:.1f}, Manual={target:.1f}.',flush=True)
+
     def _wait_for_reference_rpm(self):
-        """Require two seconds of stable, measured engine/prop RPM on live frames."""
+        """Use instantaneous engine-test state; settle steady-flight tests live."""
+        if getattr(self, '_session_context', {}).get('test_reference') in ('1.f.(1)', '1.f.(2)'):
+            self._restore_reference_engine_rpm()
+            return
         sim = self.p3d
         if sim is None or not sim.is_connected():
             raise RuntimeError("Prepar3D disconnected before engine settling.")
@@ -1081,12 +1156,18 @@ class SuperMushakLoggerApp(QMainWindow):
         prop_target = float(prop_values[0]) if prop_values and prop_values[0] is not None else target
         if not math.isfinite(prop_target) or prop_target <= 300:
             raise RuntimeError("Manual starting propeller RPM is invalid.")
+        tolerance = startup_rpm_tolerance(getattr(self, '_session_context', {}).get('test_reference'))
         samples = []
+        live_sample_seconds = 0.0
+        last_live_sample_at = None
         engine_test = getattr(self, '_session_context', {}).get('test_reference') in ('1.f.(1)', '1.f.(2)')
         reference_ias = float(reference.get('airspeed', float('nan')))
         reference_alt = float(reference.get('altitude_msl', state.get('pressure_alt', float('nan'))))
         if engine_test and not all(math.isfinite(v) for v in (reference_ias, reference_alt)):
             raise RuntimeError('Engine replay requires recorded initial IAS and MSL altitude.')
+        # Every airborne replay needs the same flight-state protection: RPM
+        # depends on airspeed/load during the live warm-up, including climb tests.
+        guard_flight_state = all(math.isfinite(v) for v in (reference_ias, reference_alt))
         corrections = 0
         started = time.monotonic()
         print(f"[Auto Prep] Settling measured RPM near Manual engine={target:.0f}, prop={prop_target:.0f} before recording.", flush=True)
@@ -1104,7 +1185,7 @@ class SuperMushakLoggerApp(QMainWindow):
                 if fresh is None:
                     raise RuntimeError("No fresh live RPM telemetry; replay remains blocked.")
                 now = time.monotonic()
-                if engine_test:
+                if guard_flight_state:
                     actual_ias = float(fresh.get('airspeed_indicated', float('nan')))
                     actual_alt = float(fresh.get('pressure_alt', float('nan')))
                     if not all(math.isfinite(v) for v in (actual_ias, actual_alt)):
@@ -1114,7 +1195,10 @@ class SuperMushakLoggerApp(QMainWindow):
                     # initialization before engine RPM can settle. The caller restores
                     # the exact Manual state afterwards and retains its final 2 kt check.
                     if abs(actual_ias-reference_ias) > 5.0 or abs(actual_alt-reference_alt) > 25.0:
-                        samples.clear()  # Never accept RPM measured outside the reference flight state.
+                        # Flight-state restoration does not reset engine power. Keep
+                        # valid in-envelope RPM samples, but exclude this frame and
+                        # all paused restoration time from the stability duration.
+                        last_live_sample_at = None
                         if now-started >= 20.0:
                             raise RuntimeError(f'Engine initialization drifted from Manual flight conditions: IAS={actual_ias:.1f} kt (target {reference_ias:.1f}), MSL={actual_alt:.0f} ft (target {reference_alt:.0f}). Replay remains blocked.')
                         print(f'[Auto Prep] Restoring initialization flight state before RPM check: IAS={actual_ias:.1f}/{reference_ias:.1f} kt, MSL={actual_alt:.0f}/{reference_alt:.0f} ft.', flush=True)
@@ -1129,6 +1213,8 @@ class SuperMushakLoggerApp(QMainWindow):
                         corrections += 1
                         sim.unpause_sim()
                         continue
+                    if not hasattr(self, '_session_context'):
+                        self._session_context = {}
                     self._session_context['engine_rpm_initialization'] = dict(
                         reference_ias_kt=reference_ias, actual_ias_kt=actual_ias,
                         reference_altitude_msl_ft=reference_alt, actual_altitude_msl_ft=actual_alt,
@@ -1137,19 +1223,31 @@ class SuperMushakLoggerApp(QMainWindow):
                 props = fresh.get("prop_rpms", [])
                 prop = float(props[0]) if props else float("nan")
                 if (math.isfinite(engine) and math.isfinite(prop) and
-                        abs(engine-target) <= 10.0 and abs(prop-prop_target) <= 10.0):
-                    samples.append((now, engine, prop))
+                        abs(engine-target) <= tolerance and abs(prop-prop_target) <= tolerance):
+                    if last_live_sample_at is not None:
+                        live_sample_seconds += now-last_live_sample_at
+                    last_live_sample_at = now
+                    samples.append((live_sample_seconds, engine, prop))
                     # Keep a trailing window with one sample spanning its full duration.
-                    while len(samples) > 1 and samples[1][0] <= now-2.0:
+                    while len(samples) > 1 and samples[1][0] <= live_sample_seconds-2.0:
                         samples.pop(0)
-                    if (len(samples) >= 5 and now-samples[0][0] >= 2.0 and
+                    if (len(samples) >= 5 and live_sample_seconds-samples[0][0] >= 2.0 and
                             all(max(row[i] for row in samples)-min(row[i] for row in samples) <= 10.0 for i in (1, 2))):
                         print(f"[Auto Prep] RPM settled: engine={engine:.1f}, prop={prop:.1f}; restoring paused flight state.", flush=True)
+                        if not hasattr(self, '_session_context'):
+                            self._session_context = {}
+                        self._session_context['rpm_startup_readiness'] = dict(
+                            reference_engine_rpm=target, reference_prop_rpm=prop_target,
+                            actual_engine_rpm=engine, actual_prop_rpm=prop,
+                            tolerance_rpm=tolerance, stable_seconds=live_sample_seconds-samples[0][0],
+                            flight_state_corrections=corrections)
                         return
                 else:
                     samples.clear()
+                    live_sample_seconds = 0.0
+                    last_live_sample_at = None
                 if now-started >= 20.0:
-                    raise RuntimeError(f"Engine did not settle near Manual RPM within 20s: engine={engine:.1f} (target {target:.1f}), prop={prop:.1f} (target {prop_target:.1f}). Replay remains blocked.")
+                    raise RuntimeError(f"Engine did not settle near Manual RPM within 20s: engine={engine:.1f} (target {target:.1f}), prop={prop:.1f} (target {prop_target:.1f}), startup allowance +/-{tolerance:.0f} RPM. Replay remains blocked.")
                 time.sleep(.1)
         finally:
             sim.pause_sim()
@@ -1480,6 +1578,8 @@ class SuperMushakLoggerApp(QMainWindow):
             throttle_target=float(self.ref_throt_pos[0]) if throttle_cmd is None else float(throttle_cmd)
             if self.p3d is None or not self.p3d.set_replay_throttle(throttle_target):
                 raise RuntimeError("Prepar3D rejected the starting replay throttle.")
+            if getattr(self, '_session_context', {}).get('test_reference') in ('1.f.(1)', '1.f.(2)'):
+                self._restore_reference_engine_rpm()
         except (ValueError,RuntimeError) as exc:
             self.is_recording=False
             self.brunner.release_controls()
@@ -1887,6 +1987,8 @@ class SuperMushakLoggerApp(QMainWindow):
             # Save Initial Conditions JSON
             json_filename = os.path.splitext(csv_path)[0] + "_init_conditions.json"
             snapshot = self.manual_t0_snapshot if self.test_mode == "manual" else self.auto_t0_snapshot
+            if self.test_mode == "auto" and snapshot:
+                snapshot['rpm_startup_readiness'] = getattr(self, '_session_context', {}).get('rpm_startup_readiness')
             init_dict = {
                 self.test_mode: snapshot,
                 "manual_ref_csv": self.active_manual_ref_path if self.test_mode == "auto" else "",
