@@ -162,12 +162,50 @@ def launch(mode, spec, output_dir, reference=None, duration_s=None, control_meth
     return process,context
 
 
+def configure_test_extension(window, reference):
+    """Load only an explicitly mapped test adapter, never alter BRUNNER modules."""
+    for name,original in getattr(window,'_test_extension_originals',{}).items():
+        setattr(window,name,original)
+    window._test_extension_originals={}
+    folders={'1.f.(1)':'1_f_1_Engine_acceleration','1.f.(2)':'1_f_2_Engine_deceleration'}
+    if reference not in folders:return
+    root=(Path(sys._MEIPASS) if getattr(sys,'frozen',False) else Path(__file__).resolve().parent.parent)/'test_suites'
+    def read(name,path):
+        spec=importlib.util.spec_from_file_location(name,path)
+        module=importlib.util.module_from_spec(spec);spec.loader.exec_module(module)
+        return module
+    policy=read('qtg_engine_test_policy',root/folders[reference]/'execution.py')
+    if policy.TEST_REFERENCE!=reference:raise RuntimeError('Test initialization policy mismatch.')
+    if policy.USE_SETTLED_REFERENCE_ALTIMETER:
+        read('qtg_engine_initialization_adapter',root/'_shared/engine_initialization.py').install(window)
+
+
 def initialize_mode(window, mode, reference=None):
     """Dispatch only after both connections are available. No duplicate prep code."""
     if not window.p3d or not window.p3d.is_connected() or not window.brunner.sock:
         raise RuntimeError('P3D and BRUNNER must both be connected before initialization.')
     window._prepared=False
     window._preparing=True
+    context=getattr(window,'_session_context',{})
+    configure_test_extension(window,context.get('test_reference'))
+    if context.get('test_reference') in ('1.f.(1)','1.f.(2)'):
+        # Engine tests use the user's BRUNNER initialization verbatim. Keep
+        # application-specific PID/condition preparation out of this pathway.
+        base=window._base_module
+        if mode=='manual':
+            entry=base.SuperMushakLoggerApp.start_manual_test
+        elif mode=='auto':
+            if getattr(window,'_control_method','replay')!='replay':
+                raise ValueError('Engine tests support Recorded Replay only.')
+            window.selected_ref_csv=validate_reference(reference)
+            entry=base.SuperMushakLoggerApp.start_auto_test_only
+        else:
+            raise ValueError('Unknown test mode')
+        context['initialization_source']={
+            'codebase':'brunner', 'entry_point':entry.__name__,
+            'module':str(Path(base.__file__).resolve())}
+        entry(window)
+        return
     if mode=='manual': window.start_manual_test()
     elif mode=='auto' and getattr(window,'_control_method','replay')=='pid':
         import qtg_climb_pid

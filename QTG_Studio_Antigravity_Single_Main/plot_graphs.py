@@ -426,7 +426,7 @@ def _initial_page(pdf, mode, source_path, sim_df, ref_df=None, metadata=None):
         ("*** Sim Systems ***", [
             ("Primary Motion (-)", "Primary Motion (-)", ""),
             ("Secondary Motion (-)", "Secondary Motion (-)", ""),
-            ("Sound Level (-)", "Sound Level (-) ", ""),
+            ("Sound Level (-)", "Sound Level (-)", ""),
             ("Vibration Level (%)", "Vibration Level (%)", ""),
         ]),
     ]
@@ -435,7 +435,7 @@ def _initial_page(pdf, mode, source_path, sim_df, ref_df=None, metadata=None):
         if key == "Primary Motion (-)" or key == "Secondary Motion (-)":
             return "Off", "Off"
         if key == "Sound Level (-)":
-            return "0", "0"
+            return "-", "-"
         if key == "Vibration Level (%)":
             return "50", "50"
         if key == "Baro Press (hPa)":

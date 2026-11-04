@@ -194,11 +194,11 @@ class ClimbPidTests(unittest.TestCase):
     def test_non_climb_reports_keep_original_renderer_even_with_graph_settings(self):
         renderer=engine.load_base().plot_graphs
         with tempfile.TemporaryDirectory() as root:
-            manual=Path(root)/'acceleration_manual.csv';manual.write_text('Time (s)\n0\n')
-            automatic=Path(root)/'acceleration_auto.csv';automatic.write_text('Time (s)\n0\n')
+            manual=Path(root)/'non_climb_manual.csv';manual.write_text('Time (s)\n0\n')
+            automatic=Path(root)/'non_climb_auto.csv';automatic.write_text('Time (s)\n0\n')
             with patch.object(renderer,'_manual_report') as original_manual,patch.object(renderer,'_auto_report') as original_auto,patch.object(renderer,'_pid_report') as climb:
-                renderer.plot_aligned_comparison(manual,test_reference='1.f.(1)',selected_graphs=['pitch_force'])
-                renderer.plot_aligned_comparison(automatic,manual_csv_path=manual,test_reference='1.f.(1)',selected_graphs=[])
+                renderer.plot_aligned_comparison(manual,test_reference='2.a.(1)',selected_graphs=['pitch_force'])
+                renderer.plot_aligned_comparison(automatic,manual_csv_path=manual,test_reference='2.a.(1)',selected_graphs=[])
                 original_manual.assert_called_once()
                 original_auto.assert_called_once()
                 climb.assert_not_called()

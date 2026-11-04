@@ -9,6 +9,8 @@ datas = [(str(root.parent/'PID Controller'/'SMK_IAS_PID_BRUNNER_ONLY_V4_1.py'), 
          (str(root/'easa_references'), 'easa_references'),
          (str(root/'test_catalog.csv'), '.')]
 datas += [(str(brunner/'src'/name), 'brunner_base/src') for name in ['replay_support.py','brunner_interface.py','p3d_simconnect_v15.py','plot_graphs.py']]
+datas += [(str(root.parent/'test_suites'/relative), 'test_suites/'+str(Path(relative).parent)) for relative in ['_shared/engine_initialization.py','1_f_1_Engine_acceleration/execution.py','1_f_2_Engine_deceleration/execution.py']]
+
 binaries = [(str(brunner/'native/bin/p3d_bridge_engine_init_v1517.dll'), 'brunner_base/native/bin'),
             (str(root/'bridge/bin/qtg_p3d_bridge.dll'), 'bridge/bin'),
             (str(root/'bridge/bin/qtg_simconnect.dll'), 'bridge/bin'),

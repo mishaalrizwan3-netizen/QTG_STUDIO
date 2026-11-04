@@ -265,11 +265,11 @@ TESTS = [
              "", "± 3 kts airspeed | ± 5% or ± 0.5 m/s (100 ft/min) R/C but not less than applicable AFM values"),
     TestSpec("1.f.(1)", "Engine acceleration", "Performance", 61,
              "To demonstrate that the simulated engine acceleration conforms to the validation data.",
-             "Flt cond: Approach or Landing | Alt[ft]: 2000 | IAS[kts]: 80 | Flaps: 0",
+             "Flt cond: Approach or Landing | Alt[ft]: 2000 | IAS[kts]: 80 | Flaps: 0 | Throttle[%]: 5",
              "± 10% Ti or ± 0.25 s | ± 10% Tt (Ti: 10% response, Tt: 90% go-around power)"),
     TestSpec("1.f.(2)", "Engine deceleration", "Performance", 61,
              "To demonstrate that the simulated engine deceleration conforms to the aeroplane.",
-             "Flt cond: Ground | Alt[ft]: 2000 | IAS[kts]: 80 | Flaps: 0",
+             "Flt cond: Ground | Alt[ft]: 2000 | IAS[kts]: 80 | Flaps: 0 | Throttle[%]: 100",
              "± 10% Tt (Total time from initial throttle movement until 90% flight idle throttle movement)"),
 
     # --- Static Control Checks (5 tests) ---
@@ -1014,7 +1014,7 @@ def generate_test_pdf(spec: TestSpec, test_mode: str, recorded_samples: list = N
 
     # Special handling for Engine Tests (1.f.(1) and 1.f.(2)):
     # Generate identical 5-page official legacy report (Airspeed/Altitude, Throttle/Engine RPM, Power/Fuel, and Ti/Tt Analysis)
-    if spec.reference in ("1.f.(1)", "1.f.(2)") and not hasattr(spec, "pdf_graphs"):
+    if spec.reference in ("1.f.(1)", "1.f.(2)"):  # Always generate official 5-page engine report
         try:
             import pandas as pd
             import numpy as np
@@ -1033,14 +1033,17 @@ def generate_test_pdf(spec: TestSpec, test_mode: str, recorded_samples: list = N
                 thr = np.array([float(s[3]) for s in recorded_samples])
                 rpm = np.array([float(s[4]) for s in recorded_samples])
             else:
-                n_pts = max(160, int(duration_s * 20))
-                t = np.linspace(0.0, max(12.0, duration_s), n_pts)
+                test_duration = float(duration_s) if (duration_s and duration_s > 0) else 21.0
+                n_pts = max(200, int(test_duration * 25))
+                t = np.linspace(0.0, max(21.0, test_duration), n_pts)
                 if mode_kind == "acceleration":
-                    thr = np.where(t < 2.0, 12.0, np.minimum(100.0, 12.0 + (t - 2.0) * 120.0))
-                    rpm = np.where(t < 2.2, 1050.0, 1050.0 + (2700.0 - 1050.0) * (1.0 - np.exp(-(t - 2.2) / 1.1)))
+                    # Initial condition: throttle 5%, Alt 2000ft, IAS 80kt, Flaps 0; steps at t=5s
+                    thr = np.where(t < 5.0, 5.0, np.minimum(100.0, 5.0 + (t - 5.0) * 120.0))
+                    rpm = np.where(t < 5.2, 1850.0, 1850.0 + (2700.0 - 1850.0) * (1.0 - np.exp(-(t - 5.2) / 1.1)))
                 else:
-                    thr = np.where(t < 2.0, 100.0, np.maximum(10.0, 100.0 - (t - 2.0) * 120.0))
-                    rpm = np.where(t < 2.2, 2700.0, 1000.0 + (2700.0 - 1000.0) * np.exp(-(t - 2.2) / 1.1))
+                    # Initial condition: throttle 100%, drops to idle at t=5s
+                    thr = np.where(t < 5.0, 100.0, np.maximum(5.0, 100.0 - (t - 5.0) * 120.0))
+                    rpm = np.where(t < 5.2, 2700.0, 1000.0 + (2700.0 - 1000.0) * np.exp(-(t - 5.2) / 1.1))
                 ias = np.full_like(t, 80.0) + np.random.normal(0, 0.2, len(t))
                 alt = np.full_like(t, 2000.0) + np.random.normal(0, 1.5, len(t))
 
@@ -1072,15 +1075,24 @@ def generate_test_pdf(spec: TestSpec, test_mode: str, recorded_samples: list = N
                 "kind": mode_kind,
                 "status": "complete",
                 "critical_parameter_kind": "map",
-                "post_seconds": 15,
-                "event_time_s": 2.0
+                "post_seconds": 16,
+                "event_time_s": 5.0,
+                "test_reference": spec.reference
             }
 
             try:
                 import engine_report_v2
+                manual_ref_file = None
+                if is_auto:
+                    manual_ref_file = getattr(spec, "manual_ref_path", None)
+                    if not manual_ref_file:
+                        candidates = sorted(output_dir.glob("*manual*.csv"), key=lambda p: p.stat().st_mtime)
+                        candidates = [c for c in candidates if not c.name.endswith("_engine_channels.csv") and not c.name.endswith("_legacy_plot.csv")]
+                        if candidates:
+                            manual_ref_file = str(candidates[-1])
                 gen_pdf = engine_report_v2.create_report(
                     csv_path=str(csv_path),
-                    manual_path=None,
+                    manual_path=manual_ref_file,
                     metadata=metadata_dict
                 )
                 if gen_pdf and Path(gen_pdf).exists():
@@ -2051,43 +2063,21 @@ class App(tk.Tk):
 
             tbl_box.grid_columnconfigure((0, 1, 2, 3), weight=1, uniform="init_col")
 
-            headers = ["Flt cond", "Alt[ft]", "IAS[kts]", "Flaps"]
+            if hasattr(self, '_ensure_test_settings'):
+                self._ensure_test_settings(spec)
+            else:
+                App._ensure_test_settings(self, spec)
+            headers = ["Flt cond", "Alt[ft]", "IAS[kts]", "Flaps", "Throttle[%]"] if spec.reference in ("1.f.(1)", "1.f.(2)") else ["Flt cond", "Alt[ft]", "IAS[kts]", "Flaps"]
+            tbl_box.grid_columnconfigure(tuple(range(len(headers))), weight=1, uniform="init_col")
             for c_idx, h in enumerate(headers):
                 tk.Label(
                     tbl_box, text=h, bg="#F1F5F9", fg="#1E3A8A",
                     font=(FONT, 9, "bold"), pady=6
                 ).grid(row=0, column=c_idx, sticky="nsew", padx=1, pady=1)
 
-            if spec.reference == "1.c.(1)":
-                flt_val = "Clean or specified climb configuration"
-                alt_val = "3000"
-                ias_val = "80"
-                flaps_val = "0"
-            elif spec.reference == "1.f.(1)":
-                flt_val = "Approach or Landing"
-                alt_val = "2000"
-                ias_val = "80"
-                flaps_val = "0"
-            elif spec.reference == "1.f.(2)":
-                flt_val = "Ground"
-                alt_val = "2000"
-                ias_val = "80"
-                flaps_val = "0"
-            else:
-                ic_map = {}
-                for part in spec.init_conds.split("|"):
-                    if ":" in part:
-                        k_s, v_s = part.split(":", 1)
-                        ic_map[k_s.strip()] = v_s.strip()
-                flt_val = ic_map.get("Flt cond", "Clean")
-                alt_val = ic_map.get("Alt[ft]", "2000")
-                ias_val = ic_map.get("IAS[kts]", "80")
-                flaps_val = ic_map.get("Flaps", "0")
-
-            values = [flt_val, alt_val, ias_val, flaps_val]
-            for c_idx, val in enumerate(values):
+            for c_idx, h in enumerate(headers):
                 tk.Label(
-                    tbl_box, textvariable=self._test_settings[spec.reference][0][headers[c_idx]], bg="#FFFFFF", fg=COL["text"],
+                    tbl_box, textvariable=self._test_settings[spec.reference][0][h], bg="#FFFFFF", fg=COL["text"],
                     font=(FONT, 9, "bold"), pady=6
                 ).grid(row=1, column=c_idx, sticky="nsew", padx=1, pady=1)
         else:
@@ -2187,7 +2177,7 @@ class App(tk.Tk):
         bar.pack(fill="x")
         self._label(bar,"Duration (s):",9,COL["text"],anchor="w").pack(side="left")
         if not hasattr(self,"_common_duration_vars"): self._common_duration_vars={}
-        self._common_duration_var=self._common_duration_vars.setdefault(spec.reference,tk.StringVar(value="75"))
+        self._common_duration_var=self._common_duration_vars.setdefault(spec.reference,tk.StringVar(value="21" if spec.reference in ("1.f.(1)","1.f.(2)") else "75"))
         self.common_duration_spinbox=ttk.Spinbox(bar,from_=1,to=3600,width=6,textvariable=self._common_duration_var)
         self.common_duration_spinbox.pack(side="left",padx=(6,14))
         self._sync_common_duration(spec)
@@ -2211,7 +2201,8 @@ class App(tk.Tk):
         if not hasattr(self,'_pid_duration_vars'):self._pid_duration_vars={}
         method=getattr(self,'_automatic_methods',{}).get(spec.reference)
         is_pid=spec.reference=='1.c.(1)' and (method is None or method.get()=='PID Automatic')
-        self._common_duration_var=self._pid_duration_vars.setdefault(spec.reference,tk.StringVar(value='75')) if is_pid else self._common_duration_vars[spec.reference]
+        default_dur = '21' if spec.reference in ('1.f.(1)', '1.f.(2)') else '75'
+        self._common_duration_var=self._pid_duration_vars.setdefault(spec.reference,tk.StringVar(value='75')) if is_pid else self._common_duration_vars.setdefault(spec.reference, tk.StringVar(value=default_dur))
         self.common_duration_spinbox.configure(textvariable=self._common_duration_var)
 
     def _refresh_common_references(self):
@@ -2777,7 +2768,7 @@ class App(tk.Tk):
             try:
                 import engine_rules_v2
                 kind = "acceleration" if spec.reference == "1.f.(1)" else "deceleration"
-                self.engine_timing = engine_rules_v2.EngineTiming(kind=kind, post_seconds=15)
+                self.engine_timing = engine_rules_v2.EngineTiming(kind=kind, post_seconds=16)
             except Exception:
                 pass
             action_desc = "ADVANCE throttle to 100%" if spec.reference == "1.f.(1)" else "REDUCE throttle to idle"
@@ -3125,20 +3116,15 @@ class App(tk.Tk):
         getattr(self, "_settings_unlocked", set()).discard(spec.reference)
         self._build_settings_panel(spec)
 
-    def _build_settings_panel(self, spec):
-        if not hasattr(self,"_automatic_methods"): self._automatic_methods={}
-        self._automatic_methods.setdefault(spec.reference,tk.StringVar(value="PID Automatic" if spec.reference=="1.c.(1)" else "Recorded Replay"))
-        if spec.reference=="1.c.(1)":
-            if not hasattr(self,"_pid_targets"): self._pid_targets={}
-            if not hasattr(self,"_pid_validation"): self._pid_validation={}
-            self._pid_targets.setdefault(spec.reference,tk.StringVar(value="80"))
-            self._pid_targets[spec.reference].set("80")
-            self._pid_validation.setdefault(spec.reference,tk.StringVar())
-        for widget in self.settings_panel.winfo_children():
-            widget.destroy()
+    def _ensure_test_settings(self, spec):
+        if not hasattr(self, "_test_settings"):
+            self._test_settings = {}
         if spec.reference not in self._test_settings:
-            defaults = {"Flt cond": "Clean", "Alt[ft]": "2000", "IAS[kts]": "80", "Flaps": "0", "Latitude[deg]": "32.235", "Longitude[deg]": "74.135",
-                        "Throttle[%]": "100" if spec.reference in ("1.f.(2)","1.c.(1)") else "0",
+            throttle_def = "5" if spec.reference == "1.f.(1)" else ("100" if spec.reference in ("1.f.(2)", "1.c.(1)") else "0")
+            flt_def = "Approach or Landing" if spec.reference == "1.f.(1)" else ("Ground" if spec.reference == "1.f.(2)" else "Clean")
+            defaults = {"Flt cond": flt_def, "Alt[ft]": "2000", "IAS[kts]": "80", "Flaps": "0",
+                        "Latitude[deg]": "32.235", "Longitude[deg]": "74.135",
+                        "Throttle[%]": throttle_def,
                         "Temperature[C]": "15"}
             for part in spec.initial_conditions.split("|"):
                 if ":" in part:
@@ -3152,15 +3138,7 @@ class App(tk.Tk):
             g_list = [(label, column, tk.BooleanVar(value=True)) for label, column in channels]
             self._test_settings[spec.reference] = (
                 {key: tk.StringVar(value=value) for key, value in defaults.items()},
-                g_list)
-            spec.pdf_graphs = [(label, column) for label, column in channels]
-            def _make_sync(s=spec, gl=g_list):
-                def _do_sync(*_):
-                    s.pdf_graphs = [(lbl, col) for lbl, col, v in gl if v.get()]
-                return _do_sync
-            _sync_cb = _make_sync()
-            for _, _, var in g_list:
-                var.trace_add("write", _sync_cb)
+                [(label, column, tk.BooleanVar(value=True)) for label, column in channels])
         if not hasattr(self, "_graph_csv_paths"):
             self._graph_csv_paths = {}
         self._graph_csv_paths.setdefault(spec.reference, tk.StringVar())
@@ -3461,7 +3439,7 @@ class App(tk.Tk):
                                         if self.engine_timing:
                                             self.engine_timing.event = elapsed
 
-                                    hold_rem = max(0.0, 20.0 - elapsed)
+                                    hold_rem = max(0.0, 21.0 - elapsed)
                                     action_name = "ADVANCED to 100%" if kind == "acceleration" else "REDUCED to idle (0%)"
                                     msg = (f"🔥 AUTO COMMAND: {action_name}!  |  Recording response ({hold_rem:.1f} s remaining)  |  "
                                            f"Thr: {sample.throttle_percent:.0f}%  |  RPM: {sample.engine_rpm:.0f}")

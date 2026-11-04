@@ -12,7 +12,7 @@ class EngineTiming:
         if self.event is None and direction*(float(throttle)-self.baseline)>=2:
             self.event=float(elapsed)
         if elapsed>=5:self.cue=True
-        return (math.ceil(self.event+self.post_seconds) if self.event is not None else 35)
+        return (math.ceil(self.event+self.post_seconds) if self.event is not None else 21)
     def metadata(self):
         return dict(kind=self.kind,post_seconds=self.post_seconds,event_time_s=self.event,
             baseline_throttle_pct=self.baseline,trigger='2 percentage-point directional throttle change',

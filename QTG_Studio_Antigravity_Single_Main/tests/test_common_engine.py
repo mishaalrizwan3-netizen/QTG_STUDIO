@@ -207,6 +207,27 @@ class CommonEngineTests(unittest.TestCase):
             window.start_auto_test_only.assert_called_once_with()
             window.start_manual_test.assert_not_called()
 
+    def test_engine_tests_call_updated_brunner_initialization_directly(self):
+        for reference in ('1.f.(1)','1.f.(2)'):
+            for mode in ('manual','auto'):
+                manual=Mock();manual.__name__='start_manual_test'
+                auto=Mock();auto.__name__='start_auto_test_only'
+                base=SimpleNamespace(__file__=str(engine.brunner_root()/'Super_Mushak_Logger_GUI.py'),
+                    SuperMushakLoggerApp=SimpleNamespace(start_manual_test=manual,start_auto_test_only=auto))
+                window=SimpleNamespace(p3d=Mock(is_connected=lambda:True),brunner=SimpleNamespace(sock=object()),
+                    _session_context={'test_reference':reference},_base_module=base,_control_method='replay',
+                    _commit_initial_position=Mock(),_refresh_restored_airdata=Mock(),
+                    start_manual_test=Mock(),start_auto_test_only=Mock())
+                with patch.object(engine,'validate_reference',return_value='selected_manual.csv'),patch.object(engine,'apply_manual_conditions') as extra:
+                    engine.initialize_mode(window,mode,'selected_manual.csv')
+                (manual if mode=='manual' else auto).assert_called_once_with(window)
+                (auto if mode=='manual' else manual).assert_not_called()
+                window.start_manual_test.assert_not_called()
+                window.start_auto_test_only.assert_not_called()
+                extra.assert_not_called()
+                self.assertEqual(window._session_context['initialization_source']['codebase'],'brunner')
+                if mode=='auto':self.assertEqual(window.selected_ref_csv,'selected_manual.csv')
+
     def test_missing_connections_prevent_initialization(self):
         for p3d,sock in [(None,object()),(Mock(is_connected=lambda:False),object()),(Mock(is_connected=lambda:True),None)]:
             window=SimpleNamespace(p3d=p3d,brunner=SimpleNamespace(sock=sock),start_manual_test=Mock())
