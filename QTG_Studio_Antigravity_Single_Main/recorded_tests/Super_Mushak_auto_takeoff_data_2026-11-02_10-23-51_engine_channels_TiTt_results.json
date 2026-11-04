@@ -1,0 +1,80 @@
+{
+  "software": "SMK Engine V2.1.3 Ti/Tt supplemental assessment",
+  "basis": "EASA CS-FSTD(A) Issue 2, 1.f(1)/(2)",
+  "mode": "acceleration",
+  "parameter_kind": "map",
+  "critical_parameter": "manifold_inhg",
+  "measurements": {
+    "Manual": {
+      "name": "Manual",
+      "mode": "acceleration",
+      "parameter": "map",
+      "t_start": null,
+      "t_10": null,
+      "t_90": null,
+      "Ti_s": null,
+      "Tt_s": null,
+      "initial_parameter": null,
+      "final_parameter": null,
+      "throttle_initial_pct": 100.0,
+      "throttle_final_pct": 5.000000074505806,
+      "status": "INVALID",
+      "warnings": [
+        "Throttle sweep too small/wrong direction: -95.00 percentage points",
+        "No throttle movement onset detectable"
+      ],
+      "columns": {
+        "time": "time_s",
+        "throttle": "throttle_pct",
+        "critical_parameter": "manifold_inhg",
+        "source_file": "QTG_Studio_Antigravity_Single_Main\\recorded_tests\\Super_Mushak_manual_takeoff_data_2026-11-02_10-20-43_engine_channels.csv",
+        "median_interval_s": 0.039977192878723145
+      }
+    },
+    "Automatic": {
+      "name": "Automatic",
+      "mode": "acceleration",
+      "parameter": "map",
+      "t_start": null,
+      "t_10": null,
+      "t_90": null,
+      "Ti_s": null,
+      "Tt_s": null,
+      "initial_parameter": null,
+      "final_parameter": null,
+      "throttle_initial_pct": 99.993896484375,
+      "throttle_final_pct": 5.000000074505806,
+      "status": "INVALID",
+      "warnings": [
+        "Throttle sweep too small/wrong direction: -94.99 percentage points",
+        "No throttle movement onset detectable"
+      ],
+      "columns": {
+        "time": "time_s",
+        "throttle": "throttle_pct",
+        "critical_parameter": "manifold_inhg",
+        "source_file": "QTG_Studio_Antigravity_Single_Main\\recorded_tests\\Super_Mushak_auto_takeoff_data_2026-11-02_10-23-51_engine_channels.csv",
+        "median_interval_s": 0.04001760482788086
+      }
+    }
+  },
+  "comparisons": [
+    {
+      "label": "Automatic vs Manual",
+      "assessment_type": "manual_vs_automatic_engineering",
+      "metrics": {
+        "Ti": {
+          "status": "NOT_ASSESSED"
+        },
+        "Tt": {
+          "status": "NOT_ASSESSED"
+        }
+      },
+      "status": "INVALID"
+    }
+  ],
+  "status": "INVALID",
+  "qualification_status": "NOT_ASSESSED",
+  "qualification_note": "Manual-vs-Automatic time agreement is an engineering repeatability check, not EASA qualification. An accepted independent aircraft reference, matched conditions, and justified power parameter are required.",
+  "reference_type": "recorded Manual repeatability baseline"
+}

@@ -131,7 +131,7 @@ def apply_manual_conditions(window,values):
 
 def launch(mode, spec, output_dir, reference=None, duration_s=None, control_method="replay", pid_conditions=None, validation_csv=None, initial_conditions=None, selected_graphs=None):
     if mode not in ('manual','auto'): raise ValueError('Unknown test mode')
-    duration_s=validate_duration((10 if mode=='auto' and control_method=='pid' else 75) if duration_s is None else duration_s)
+    duration_s=validate_duration(75 if duration_s is None else duration_s)
     initial_conditions=validate_conditions(initial_conditions)
     brunner_root()
     if control_method not in ('replay','pid'): raise ValueError('Unknown Automatic control method')
@@ -331,7 +331,7 @@ def worker_class(base,context,publish):
                 if method not in ('replay','pid'): raise ValueError('Unknown Automatic control method')
                 if method=='pid' and command.get('test_reference',context['test_reference'])!='1.c.(1)': raise ValueError('PID is supported only for normal climb.')
                 reference=validate_reference(command['reference_csv']) if mode=='auto' and method=='replay' else None
-                duration=validate_duration(command.get('duration_s',10 if mode=='auto' and method=='pid' else 75))
+                duration=validate_duration(command.get('duration_s',75))
                 if mode not in ('manual','auto'): raise ValueError('Unknown test mode')
                 if method=='pid':
                     from qtg_climb_pid import options,validate_dataset

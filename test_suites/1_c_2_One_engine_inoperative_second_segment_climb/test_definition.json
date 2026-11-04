@@ -1,0 +1,13 @@
+{
+  "reference": "1.c.(2)",
+  "title": "One engine inoperative second segment climb",
+  "category": "Performance",
+  "availability": "MEP disabled",
+  "objective": "To demonstrate that the simulation of engine thrust, aerodynamic drag and atmosphere in an engine out second segment climb condition conforms to the validation data.",
+  "initial_conditions_catalog": "",
+  "tolerance_catalog": "± 3 kts airspeed | ± 5% or ± 0.5 m/s (100 ft/min) R/C but not less than applicable AFM values",
+  "reference_pdf_page": "58",
+  "definition_source": "QTG_Studio_Antigravity_Single_Main/test_catalog.csv",
+  "runtime_configuration": "Existing main.py test settings and common engine remain authoritative",
+  "results_directory": "D:/QTG_Test_Results/1_c_2_One_engine_inoperative_second_segment_climb"
+}

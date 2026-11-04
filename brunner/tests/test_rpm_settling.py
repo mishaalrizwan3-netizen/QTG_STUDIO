@@ -39,6 +39,31 @@ class RpmSettlingTests(unittest.TestCase):
         sim.set_initial_throttle.assert_not_called()
         sim.set_control_inputs.assert_not_called()
 
+    def test_engine_drift_is_restored_before_rpm_can_pass(self):
+        good=dict(engine_rpm=2700.,prop_rpms=[2700.],airspeed_indicated=80.,pressure_alt=2000.)
+        drift=dict(good,airspeed_indicated=101.,pressure_alt=1354.)
+        sim,fake,clock=self.run_settling(iter([drift]+[good]*40))
+        fake._session_context={'test_reference':'1.f.(1)'}
+        fake.ref_manual_snapshot.update(airspeed=80.,altitude_msl=2000.)
+        fake._restore_reference_state=Mock()
+        with clock,patch.object(gui.time,'sleep'):
+            gui.SuperMushakLoggerApp._wait_for_reference_rpm(fake)
+        fake._restore_reference_state.assert_called_once()
+        self.assertEqual(fake._session_context['engine_rpm_initialization']['flight_state_corrections'],1)
+        sim.set_initial_throttle.assert_not_called()
+        sim.set_control_inputs.assert_not_called()
+
+    def test_engine_persistent_drift_cannot_pass_matching_rpm(self):
+        drift=dict(engine_rpm=2700.,prop_rpms=[2700.],airspeed_indicated=101.,pressure_alt=1354.)
+        sim,fake,clock=self.run_settling(iter([drift]*100))
+        fake._session_context={'test_reference':'1.f.(2)'}
+        fake.ref_manual_snapshot.update(airspeed=80.,altitude_msl=2000.)
+        fake._restore_reference_state=Mock()
+        with clock,patch.object(gui.time,'sleep'),self.assertRaisesRegex(RuntimeError,'drifted'):
+            gui.SuperMushakLoggerApp._wait_for_reference_rpm(fake)
+        self.assertTrue(fake._restore_reference_state.called)
+        self.assertTrue(sim.pause_sim.called)
+
     def test_permanent_offset_times_out_paused(self):
         frames=iter([{"engine_rpm":2750.,"prop_rpms":[2750.]}]*100)
         sim,fake,clock=self.run_settling(frames)

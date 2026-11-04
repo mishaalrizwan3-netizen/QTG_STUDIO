@@ -1,0 +1,13 @@
+{
+  "reference": "2.b.(5)",
+  "title": "Short period dynamics",
+  "category": "Longitudinal Handling",
+  "availability": "SEP catalog test",
+  "objective": "To demonstrate that the simulator short period dynamic characteristics conform to the validation data.",
+  "initial_conditions_catalog": "",
+  "tolerance_catalog": "± 10% period of oscillation or ± 15% frequency (wn) | ± 0.05 or ± 15% damping ratio (zeta)",
+  "reference_pdf_page": "71",
+  "definition_source": "QTG_Studio_Antigravity_Single_Main/test_catalog.csv",
+  "runtime_configuration": "Existing main.py test settings and common engine remain authoritative",
+  "results_directory": "D:/QTG_Test_Results/2_b_5_Short_period_dynamics"
+}

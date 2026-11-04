@@ -13,7 +13,7 @@ import time
 SOURCE = 'SMK_IAS_PID_BRUNNER_ONLY_V4_1.py'
 CLIMB_PROFILE = {
     'pitch':dict(kp=.030,ki=.004,kd=.045,invert=False),
-    'ias':dict(kp=.24,ki=.008,kd=.32,min_pitch=-15.,max_pitch=15.),
+    'ias':dict(kp=.32,ki=.010,kd=.45,min_pitch=-15.,max_pitch=15.),
     'slew':dict(max_rate=.28,max_accel=.90),
 }
 VALIDATION_COLUMNS=['Time (s)','Indicated Airspeed (kts)','Rate of Climb/Descent (fpm)']
@@ -71,6 +71,15 @@ def original_pitch_transport(device):
         return response
     transport.exchange=traced_exchange
     return transport
+
+
+def initialize_airspeed_controller(controller,cfg,profile,actual_pitch,actual_ias=None):
+    """Do not carry a nose-down starting demand into an already overspeed climb."""
+    correct_overspeed=(actual_ias is not None and math.isfinite(float(actual_ias))
+        and float(actual_ias)>cfg['target_ias'] and actual_pitch<0.)
+    controller.reset(0. if correct_overspeed else actual_pitch)
+    return {'calibrated_climb_trim':False,'overspeed_startup_correction':correct_overspeed,
+        'integral_seed_deg':controller.integral,'initial_command_deg':controller.cmd_pitch}
 
 
 def options(values=None):
@@ -287,7 +296,7 @@ def prepare(window,base,context):
     window.pid_controller_active=False
     window.pid_initial_resume_count=0
     context['pid_conditions']=cfg
-    context['pid_workflow']=dict(target_ias=80.,band_kt=1.,hold_s=5.,timeout_s=45.,duration_s=window.target_duration_sec)
+    context['pid_workflow']=dict(target_ias=80.,band_kt=1.,hold_s=5.,timeout_s=None,duration_s=window.target_duration_sec)
     window.test_mode='auto'
     window.active_manual_ref_path=None
     window.selected_ref_csv=None
@@ -311,6 +320,7 @@ def prepare(window,base,context):
             actual=apply_manual_conditions(window,initial)
             check_cancel(window)
             context['pid_initialization_method']='Shared Manual initialization'
+            check_cancel(window)
             window.pid_paused=True
             window.pid_ready=True
             window.pid_controller_active=False
@@ -348,7 +358,6 @@ class StabilizationGate:
     """Monotonic-time state: every out-of-band sample restarts the hold."""
     def __init__(self): self.since=None
     def update(self,now,ias,started):
-        if now-started>45.: raise RuntimeError('Airspeed stabilization failed: 45-second timeout.')
         if not math.isfinite(ias): raise RuntimeError('Invalid IAS feedback.')
         if abs(ias-80.)>1.: self.since=None; return False
         if self.since is None:self.since=now
@@ -391,13 +400,15 @@ def loop(window,base):
         data=fresh(window,window.p3d.get_telemetry_sequence())
         profile=getattr(window,'pid_profile',CLIMB_PROFILE)
         pid=PitchPID(**profile['pitch']); outer=AirspeedController(**profile['ias'])
-        pid.reset(current);outer.reset(-float(data['pitch_angle']))
+        pid.reset(current)
+        seed=initialize_airspeed_controller(outer,cfg,profile,-float(data['pitch_angle']),float(data['airspeed_indicated']))
+        getattr(window,'_session_context',{})['pid_guidance_initialization']=seed
         velocity=0.; mismatch=None
         recording_started=None
         window.pid_phase='stabilizing' if automatic else 'holding'
         gate=StabilizationGate()
         response=PIDResponseVerifier()
-        window.pid_stabilization={'achieved':False,'band_kt':1.,'hold_s':5.,'timeout_s':45.}
+        window.pid_stabilization={'achieved':False,'band_kt':1.,'hold_s':5.,'timeout_s':None}
         if automatic: window.sig_update_stage.emit('Stabilizing Airspeed','Holding 80 kt within +/-1 kt for 5 continuous seconds.')
         started=last=time.monotonic()
         tick=started
@@ -407,7 +418,7 @@ def loop(window,base):
             if dt>.35: raise RuntimeError('PID scheduling watchdog expired.')
             data=fresh(window,window.p3d.get_telemetry_sequence())
             window.pid_paused=not window.p3d.simulation_running()
-            if automatic and recording_started is None and now-started>45.: raise RuntimeError('PID startup failed at 45-second timeout: '+('physical Pitch-to-simulator response was not verified' if not response.verified else 'airspeed did not stabilize')+'.')
+            if automatic and not response.verified and now-started>45.: raise RuntimeError('PID control-path verification failed: no verified physical Pitch-to-simulator response within 45 seconds.')
             if window.pid_paused:
                 if automatic: raise RuntimeError('Simulator paused during PID Automatic; test incomplete.')
                 if recording_started is not None: raise RuntimeError('Simulator paused during recording; run interrupted.')

@@ -203,6 +203,49 @@ class ClimbPidTests(unittest.TestCase):
                 original_auto.assert_called_once()
                 climb.assert_not_called()
 
+    def test_climb_uses_increased_ias_gains_without_fixed_trim_bias(self):
+        _,Controller,_=pid.controller_types()
+        controller=Controller(**pid.CLIMB_PROFILE['ias'])
+        cfg=pid.options()
+        result=pid.initialize_airspeed_controller(controller,cfg,pid.CLIMB_PROFILE,-4.)
+        self.assertFalse(result['calibrated_climb_trim'])
+        self.assertEqual(controller.integral,-4.)
+        self.assertEqual(controller.cmd_pitch,-4.)
+        demand=controller.update(80.,90.,.04,-4.)
+        self.assertLessEqual(abs(demand-(-4.)),1.25*.04+1e-9)
+        self.assertEqual((controller.kp,controller.ki,controller.kd),(.32,.010,.45))
+        result=pid.initialize_airspeed_controller(controller,dict(cfg,throttle=60),pid.CLIMB_PROFILE,-4.)
+        self.assertFalse(result['calibrated_climb_trim'])
+        self.assertEqual(controller.integral,-4.)
+
+    def test_overspeed_startup_does_not_retain_nose_down_demand(self):
+        _,Controller,_=pid.controller_types()
+        controller=Controller(**pid.CLIMB_PROFILE['ias'])
+        cfg=pid.options()
+        state=pid.initialize_airspeed_controller(controller,cfg,pid.CLIMB_PROFILE,-3.,89.)
+        self.assertTrue(state['overspeed_startup_correction'])
+        self.assertEqual(controller.cmd_pitch,0.)
+        self.assertEqual(controller.integral,0.)
+        self.assertGreater(controller.update(80.,89.,.04,-3.),0.)
+        state=pid.initialize_airspeed_controller(controller,cfg,pid.CLIMB_PROFILE,-3.,76.)
+        self.assertFalse(state['overspeed_startup_correction'])
+        self.assertEqual(controller.cmd_pitch,-3.)
+        state=pid.initialize_airspeed_controller(controller,cfg,pid.CLIMB_PROFILE,5.,89.)
+        self.assertFalse(state['overspeed_startup_correction'])
+        self.assertEqual(controller.cmd_pitch,5.)
+
+    def test_new_ias_gains_lower_pitch_demand_more_when_airspeed_is_below_target(self):
+        _,Controller,_=pid.controller_types()
+        original=Controller(kp=.24,ki=.008,kd=.32)
+        changed=Controller(**pid.CLIMB_PROFILE['ias'])
+        for controller in (original,changed):
+            controller.reset(9.)
+            controller.update(80.,80.,.04,9.)
+            for _ in range(75):controller.update(80.,76.,.04,9.)
+        self.assertLess(changed.cmd_pitch,original.cmd_pitch)
+        self.assertEqual(pid.CLIMB_PROFILE['pitch'],dict(kp=.030,ki=.004,kd=.045,invert=False))
+        self.assertEqual(pid.CLIMB_PROFILE['slew'],dict(max_rate=.28,max_accel=.90))
+
     def test_supplied_algorithms_and_limits(self):
         Pitch,Speed,slew=pid.controller_types()
         inner=Pitch();outer=Speed()
@@ -381,15 +424,50 @@ class ClimbPidTests(unittest.TestCase):
         self.assertEqual(launch.call_args.kwargs['control_method'],'pid')
         self.assertEqual(launch.call_args.kwargs['pid_conditions']['target_ias'],80.)
         host._open_pid_monitor.assert_not_called()
+        # The separate Replay button bypasses the PID selection without changing it.
+        host._common_reference_var=Mock(get=lambda:'manual.csv')
+        host._common_process=None
+        with patch.object(engine,'validate_reference',return_value='manual.csv'),patch.object(engine,'launch',return_value=(Mock(),{})) as replay:
+            main.App._launch_common_test(host,'auto',spec,control_method='replay')
+        replay.assert_called_once()
+        self.assertEqual(replay.call_args.kwargs['control_method'],'replay')
+        self.assertIsNone(replay.call_args.kwargs['pid_conditions'])
+        self.assertEqual(replay.call_args.args[3],'manual.csv')
+        self.assertEqual(host._automatic_methods[spec.reference].get(),'PID Automatic')
+        host._open_pid_monitor.assert_not_called()
 
-    def test_pid_launch_defaults_to_ten_seconds_and_manual_remains_seventy_five(self):
+    def test_climb_airspeed_graph_shows_target_and_three_knot_tolerance(self):
+        renderer=engine.load_base().plot_graphs
+        fig,ax=renderer.plt.subplots()
+        renderer._draw_climb_airspeed_target(ax,80.)
+        self.assertEqual([list(line.get_ydata()) for line in ax.lines],[[77.,77.],[83.,83.],[80.,80.]])
+        labels=ax.get_legend_handles_labels()[1]
+        self.assertTrue(any('77-83' in label for label in labels))
+        self.assertTrue(any('Target IAS (80 kt)' in label for label in labels))
+        self.assertEqual(len(ax.patches),1)
+        renderer.plt.close(fig)
+
+    def test_climb_airspeed_axis_has_whole_number_ticks_without_rounding_data(self):
+        renderer=engine.load_base().plot_graphs
+        fig,ax=renderer.plt.subplots()
+        values=[79.15,80.75]
+        line,=ax.plot([0,75],values)
+        renderer._format_climb_airspeed_axis(ax)
+        fig.canvas.draw()
+        self.assertTrue(all(float(tick).is_integer() for tick in ax.get_yticks()))
+        self.assertTrue(all('.' not in tick.get_text() for tick in ax.get_yticklabels()))
+        self.assertEqual(list(line.get_ydata()),values)
+        renderer.plt.close(fig)
+
+    def test_pid_and_manual_launch_default_to_seventy_five_seconds(self):
         with tempfile.TemporaryDirectory() as root:
             spec=SimpleNamespace(reference='1.c.(1)',title='Normal climb')
             with patch.object(engine.subprocess,'Popen'):
                 _,automatic=engine.launch('auto',spec,Path(root)/'sessions',control_method='pid')
                 _,manual=engine.launch('manual',spec,Path(root)/'sessions')
-            self.assertEqual(automatic['duration_s'],10)
+            self.assertEqual(automatic['duration_s'],75)
             self.assertEqual(manual['duration_s'],75)
+
 
     def test_startup_resume_is_bounded_and_never_overrides_stop_or_active_pid_pause(self):
         clock=[0.]
@@ -456,7 +534,7 @@ class ClimbPidTests(unittest.TestCase):
         self.assertTrue(verifier.update(.12,.12,.012)['verified'])
         with self.assertRaisesRegex(RuntimeError,'Invalid Pitch'):verifier.update(.1,.1,float('nan'))
 
-    def test_stabilization_requires_continuous_five_seconds_and_enforces_timeout(self):
+    def test_stabilization_requires_continuous_five_seconds_without_acquisition_timeout(self):
         gate=pid.StabilizationGate()
         self.assertFalse(gate.update(0,80,0))
         self.assertFalse(gate.update(4.9,80,0))
@@ -464,7 +542,11 @@ class ClimbPidTests(unittest.TestCase):
         self.assertFalse(gate.update(5,79,0))
         self.assertFalse(gate.update(9.99,81,0))
         self.assertTrue(gate.update(10,80,0))
-        with self.assertRaisesRegex(RuntimeError,'45-second'):gate.update(45.01,80,0)
+        self.assertTrue(gate.update(45.01,80,0))
+        late=pid.StabilizationGate()
+        self.assertFalse(late.update(0,90,0))
+        self.assertFalse(late.update(120,80,0))
+        self.assertTrue(late.update(125,80,0))
 
     def run_automatic_fixture(self,scenario='complete'):
         clock=[0.]
@@ -474,7 +556,7 @@ class ClimbPidTests(unittest.TestCase):
         def telemetry(*args):
             elapsed=0. if engaged[0] is None else clock[0]-engaged[0]
             position=device.move_actuators.call_args.args[0] if device.move_actuators.call_args else 0.
-            return dict(data,airspeed_indicated=90. if engaged[0] is not None and (scenario=='timeout' or elapsed<1.) else 80.,surface_elevator_rad=0. if scenario=='forwarding' else position*.1)
+            return dict(data,airspeed_indicated=90. if engaged[0] is not None and (elapsed<50. if scenario=='timeout' else elapsed<1.) else 80.,surface_elevator_rad=0. if scenario=='forwarding' else position*.1)
         sim.wait_for_fresh_telemetry.side_effect=telemetry
         device=SimpleNamespace(AXIS_PITCH=1,AXIS_ROLL=2,AXIS_RUDDER=4,_io_lock=threading.RLock(),read_axis=Mock(return_value=(0.,2.,3.)),move_actuators=Mock(),release_controls=Mock(),configure_replay_mode=Mock(),configure_pid_mode=Mock(),write_setting=Mock())
         device.read_axis.side_effect=lambda axis:((device.move_actuators.call_args.args[0] if device.move_actuators.call_args else 0.),2.,3.)
@@ -522,8 +604,18 @@ class ClimbPidTests(unittest.TestCase):
         self.assertTrue(window._session_context['pid_complete'])
         self.assertTrue(window._session_context['pid_engaged_after_live_initialization'])
 
+    def test_pid_can_acquire_airspeed_after_more_than_forty_five_seconds(self):
+        window=self.run_automatic_fixture('timeout')
+        self.assertIsNone(window.pid_fault)
+        self.assertTrue(window.pid_forwarding_check['verified'])
+        self.assertTrue(window.pid_stabilization['achieved'])
+        self.assertGreaterEqual(window.pid_stabilization['elapsed_s'],55.)
+        self.assertIsNone(window.pid_stabilization['timeout_s'])
+        self.assertEqual(window.rec_time[0],0.)
+        self.assertTrue(window._session_context['pid_complete'])
+
     def test_automatic_failures_and_stop_always_release_and_mark_incomplete(self):
-        for scenario in ('timeout','stop','disconnect','forwarding'):
+        for scenario in ('stop','disconnect','forwarding'):
             with self.subTest(scenario=scenario):
                 window=self.run_automatic_fixture(scenario)
                 self.assertTrue(window.pid_fault)
@@ -536,7 +628,6 @@ class ClimbPidTests(unittest.TestCase):
                 if scenario=='forwarding':
                     window.p3d.unpause_sim.assert_called_once()
                     window.p3d.pause_sim.assert_called_once()
-                if scenario=='timeout':self.assertIn('45-second',window.pid_fault)
 
     def test_feedback_loss_always_releases_even_if_pause_fails(self):
         sim=Mock();sim.pause_sim.side_effect=RuntimeError('Disconnected')

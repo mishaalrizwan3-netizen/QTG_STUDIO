@@ -1082,6 +1082,12 @@ class SuperMushakLoggerApp(QMainWindow):
         if not math.isfinite(prop_target) or prop_target <= 300:
             raise RuntimeError("Manual starting propeller RPM is invalid.")
         samples = []
+        engine_test = getattr(self, '_session_context', {}).get('test_reference') in ('1.f.(1)', '1.f.(2)')
+        reference_ias = float(reference.get('airspeed', float('nan')))
+        reference_alt = float(reference.get('altitude_msl', state.get('pressure_alt', float('nan'))))
+        if engine_test and not all(math.isfinite(v) for v in (reference_ias, reference_alt)):
+            raise RuntimeError('Engine replay requires recorded initial IAS and MSL altitude.')
+        corrections = 0
         started = time.monotonic()
         print(f"[Auto Prep] Settling measured RPM near Manual engine={target:.0f}, prop={prop_target:.0f} before recording.", flush=True)
         try:
@@ -1098,6 +1104,31 @@ class SuperMushakLoggerApp(QMainWindow):
                 if fresh is None:
                     raise RuntimeError("No fresh live RPM telemetry; replay remains blocked.")
                 now = time.monotonic()
+                if engine_test:
+                    actual_ias = float(fresh.get('airspeed_indicated', float('nan')))
+                    actual_alt = float(fresh.get('pressure_alt', float('nan')))
+                    if not all(math.isfinite(v) for v in (actual_ias, actual_alt)):
+                        raise RuntimeError('Missing flight-state feedback during engine RPM initialization.')
+                    if abs(actual_ias-reference_ias) > 2.0 or abs(actual_alt-reference_alt) > 25.0:
+                        samples.clear()  # Never accept RPM measured outside the reference flight state.
+                        if now-started >= 20.0:
+                            raise RuntimeError(f'Engine initialization drifted from Manual flight conditions: IAS={actual_ias:.1f} kt (target {reference_ias:.1f}), MSL={actual_alt:.0f} ft (target {reference_alt:.0f}). Replay remains blocked.')
+                        print(f'[Auto Prep] Restoring initialization flight state before RPM check: IAS={actual_ias:.1f}/{reference_ias:.1f} kt, MSL={actual_alt:.0f}/{reference_alt:.0f} ft.', flush=True)
+                        sim.pause_sim()
+                        if not sim.wait_for_paused(3.0):
+                            raise RuntimeError('Simulator did not pause for engine initialization correction.')
+                        if self.stop_worker_event.is_set():
+                            raise RuntimeError('Engine settling cancelled.')
+                        self._restore_reference_state()
+                        if self.stop_worker_event.is_set():
+                            raise RuntimeError('Engine settling cancelled.')
+                        corrections += 1
+                        sim.unpause_sim()
+                        continue
+                    self._session_context['engine_rpm_initialization'] = dict(
+                        reference_ias_kt=reference_ias, actual_ias_kt=actual_ias,
+                        reference_altitude_msl_ft=reference_alt, actual_altitude_msl_ft=actual_alt,
+                        flight_state_corrections=corrections, elapsed_s=now-started)
                 engine = float(fresh.get("engine_rpm", float("nan")))
                 props = fresh.get("prop_rpms", [])
                 prop = float(props[0]) if props else float("nan")
