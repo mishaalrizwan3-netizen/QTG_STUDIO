@@ -359,6 +359,9 @@ TESTS = [
              "", "Runway visual scene alignment within ± 1º heading and ± 0.5º glidepath alignment at decision height")
 ]
 
+for spec in TESTS:
+    spec.pdf_graphs = list(PDF_CHANNELS)
+
 
 # ======================== SECTION 2: C++ SIMCONNECT BRIDGE WRAPPER ====================
 class QTG_P3D_State(ctypes.Structure):
@@ -858,34 +861,95 @@ def find_all_smk_output_dirs() -> list[Path]:
 
 
 def sync_smk_generated_reports(active_ref: str = None) -> list[Path]:
-    """Import only reports with explicit test identity; never infer from filenames."""
-    RESULTS_ROOT.mkdir(parents=True,exist_ok=True)
-    existing=get_test_logs()
-    logged={entry.get("pdf_path") for entry in existing}
-    imported=[]
+    """Import reports from metadata or directly from generated PDF files."""
+    RESULTS_ROOT.mkdir(parents=True, exist_ok=True)
+    existing = get_test_logs()
+    logged_paths = {str(Path(entry.get("pdf_path", "")).resolve()).lower() for entry in existing if entry.get("pdf_path")}
+    logged_names = {str(entry.get("pdf_name", "")).lower() for entry in existing if entry.get("pdf_name")}
+    imported = []
+
+    # 1. Scan metadata JSONs
     for metadata in RESULTS_ROOT.rglob("*.qtg_test.json"):
         try:
-            context=json.loads(metadata.read_text(encoding="utf-8"))
-            reference=context["test_reference"]
-            title=context["title"]
-            stem=metadata.name.removesuffix(".qtg_test.json")
-            for pdf in metadata.parent.glob(stem+"*.pdf"):
-                if str(pdf) in logged: continue
-                append_test_log(reference,title,"Performance",context.get("mode","").title(),pdf)
-                logged.add(str(pdf))
+            context = json.loads(metadata.read_text(encoding="utf-8"))
+            reference = context.get("test_reference", "1.c.(1)")
+            title = context.get("title", "Test Report")
+            stem = metadata.name.removesuffix(".qtg_test.json")
+            for pdf in metadata.parent.glob(stem + "*.pdf"):
+                p_res = str(pdf.resolve()).lower()
+                if p_res in logged_paths or pdf.name.lower() in logged_names:
+                    continue
+                mtime = pdf.stat().st_mtime
+                ts = datetime.fromtimestamp(mtime).strftime("%Y-%m-%d %H:%M:%S")
+                yr = str(datetime.fromtimestamp(mtime).year)
+                append_test_log(reference, title, "Performance", context.get("mode", "Manual").title(), pdf, timestamp=ts, year=yr)
+                logged_paths.add(p_res)
+                logged_names.add(pdf.name.lower())
                 imported.append(pdf)
-        except (OSError,ValueError,KeyError):
+        except (OSError, ValueError, KeyError):
             continue
+
+    # 2. Scan for any newly generated or existing PDF reports without json
+    scan_roots = [RESULTS_ROOT]
+    local_rec = BASE / "recorded_tests"
+    if local_rec.is_dir():
+        scan_roots.append(local_rec)
+
+    for root in scan_roots:
+        try:
+            for pdf in root.rglob("*.pdf"):
+                p_res = str(pdf.resolve()).lower()
+                if p_res in logged_paths or pdf.name.lower() in logged_names:
+                    continue
+                if pdf.name.startswith("._") or "preview" in pdf.name.lower():
+                    continue
+
+                matched_spec = None
+                p_str = pdf.stem.lower()
+                p_dir = pdf.parent.name.lower()
+                for spec in TESTS:
+                    ref_clean = spec.reference.replace(".", "_").replace("(", "").replace(")", "").replace(" ", "").lower()
+                    if ref_clean in p_str or ref_clean in p_dir or spec.reference.lower() in p_str:
+                        matched_spec = spec
+                        break
+
+                ref = matched_spec.reference if matched_spec else (active_ref or "1.c.(1)")
+                ttl = matched_spec.title if matched_spec else pdf.stem.replace("_", " ")
+                grp = matched_spec.group if matched_spec else "Performance"
+
+                mode = "Manual"
+                if "auto" in p_str or "pid" in p_str:
+                    mode = "Automatic"
+                elif "manual" in p_str:
+                    mode = "Manual"
+                elif "smk" in p_str:
+                    mode = "SMK Engine Test"
+
+                try:
+                    mtime = pdf.stat().st_mtime
+                    ts = datetime.fromtimestamp(mtime).strftime("%Y-%m-%d %H:%M:%S")
+                    yr = str(datetime.fromtimestamp(mtime).year)
+                except Exception:
+                    ts = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                    yr = str(datetime.now().year)
+
+                append_test_log(ref, ttl, grp, mode, pdf, timestamp=ts, year=yr)
+                logged_paths.add(p_res)
+                logged_names.add(pdf.name.lower())
+                imported.append(pdf)
+        except Exception:
+            continue
+
     return imported
 
 
 def get_test_logs(sync: bool = False) -> list[dict]:
     """
-    Returns test execution logs that were executed by this GUI or SMK Engine.
+    Returns test execution logs sorted so the latest test document is at index 0.
     """
     output_dir = RESULTS_ROOT
     try:
-        output_dir.mkdir(parents=True,exist_ok=True)
+        output_dir.mkdir(parents=True, exist_ok=True)
     except Exception:
         pass
 
@@ -900,30 +964,37 @@ def get_test_logs(sync: bool = False) -> list[dict]:
                             entry.get("run_by_gui", False)
                             or entry.get("mode") == "SMK Engine Test"
                             or entry.get("pdf_name", "").startswith("QTG_Report_")
+                            or entry.get("pdf_name", "").endswith(".pdf")
                         ):
                             gui_logs.append(entry)
         except Exception:
             pass
 
+    gui_logs.sort(key=lambda x: str(x.get("timestamp", "")), reverse=True)
     return gui_logs
 
 
-def append_test_log(reference: str, title: str, category: str, mode: str, pdf_path: Path):
+def append_test_log(reference: str, title: str, category: str, mode: str, pdf_path: Path, timestamp: str = None, year: str = None):
     logs = get_test_logs()
     now = datetime.now()
+    ts_str = timestamp or now.strftime("%Y-%m-%d %H:%M:%S")
+    yr_str = year or str(now.year)
     entry = {
-        "timestamp": now.strftime("%Y-%m-%d %H:%M:%S"),
-        "year": str(now.year),
+        "timestamp": ts_str,
+        "year": yr_str,
         "reference": reference,
         "title": title,
         "category": category,
         "mode": mode,
         "saved_in_yearly_result": True,
         "pdf_name": pdf_path.name,
-        "pdf_path": str(pdf_path),
+        "pdf_path": str(pdf_path.resolve()),
         "run_by_gui": True
     }
+    # Filter out existing duplicates with same filename
+    logs = [e for e in logs if Path(e.get("pdf_path", "")).name != pdf_path.name and e.get("pdf_name") != pdf_path.name]
     logs.insert(0, entry)
+    logs.sort(key=lambda x: str(x.get("timestamp", "")), reverse=True)
     try:
         with open(LOGS_FILE, "w", encoding="utf-8") as f:
             json.dump(logs, f, indent=2)
@@ -1179,14 +1250,25 @@ class App(tk.Tk):
         self._build_main_content()
 
         # Default view is DASHBOARD (Home Page)
+        # Auto-connect Sim Flight Model and CLS2Sim on startup
+        try:
+            self.p3d.start()
+        except Exception:
+            pass
+        try:
+            import psutil
+            self.cls2sim_connected = any(p.name().lower() == "cls2sim.exe" for p in psutil.process_iter(['name']))
+        except Exception:
+            self.cls2sim_connected = False
+
         self.show_dashboard()
         self._update_connection_ui()
 
         self.search_var.trace_add("write", lambda *_: self._render_nav())
         self.bind("<Control-f>", lambda _: self.search_entry.focus_set() if hasattr(self, "search_entry") else None)
         self.protocol("WM_DELETE_WINDOW", self._on_close)
-        self.after(500, self._poll_p3d)
-        self.after(3000, self._auto_sync_timer)
+        self.after(300, self._poll_p3d)
+        self.after(2000, self._auto_sync_timer)
 
     def _auto_sync_timer(self):
         def _worker():
@@ -1520,16 +1602,13 @@ class App(tk.Tk):
         self._refresh_dashboard_logs()
 
     def _on_manual_refresh_logs(self):
-        def _bg():
-            try:
-                active_spec = TESTS[self.current_idx] if hasattr(self, "current_idx") else None
-                active_ref = active_spec.reference if active_spec else None
-                sync_smk_generated_reports(active_ref=active_ref)
-            except Exception:
-                pass
-            finally:
-                self.after(0, lambda: self._refresh_dashboard_logs(sync_first=False))
-        threading.Thread(target=_bg, daemon=True).start()
+        try:
+            active_spec = TESTS[self.current_idx] if hasattr(self, "current_idx") else None
+            active_ref = active_spec.reference if active_spec else None
+            sync_smk_generated_reports(active_ref=active_ref)
+        except Exception:
+            pass
+        self._refresh_dashboard_logs(sync_first=False)
 
     def _refresh_dashboard_logs(self, sync_first: bool = False):
         if sync_first:
@@ -1540,6 +1619,8 @@ class App(tk.Tk):
             except Exception:
                 pass
         logs = get_test_logs()
+        logs.sort(key=lambda x: str(x.get("timestamp", "")), reverse=True)
+
         for item in self.logs_tree.get_children():
             self.logs_tree.delete(item)
 
@@ -1558,6 +1639,13 @@ class App(tk.Tk):
                 entry.get("pdf_name", "")
             ))
 
+        # Select the latest document at the top row and scroll into view
+        children = self.logs_tree.get_children()
+        if children:
+            self.logs_tree.selection_set(children[0])
+            self.logs_tree.focus(children[0])
+            self.logs_tree.see(children[0])
+
         self.lbl_stat_total.configure(text=f"Total Tests Performed: {len(logs)}")
         self.lbl_stat_saved.configure(text=f"Saved in Yearly Result: {saved_count} (Yes)")
         self._on_year_selected()
@@ -1565,6 +1653,7 @@ class App(tk.Tk):
     def _on_year_selected(self, event=None):
         selected = self.selected_year.get()
         logs = get_test_logs()
+        logs.sort(key=lambda x: str(x.get("timestamp", "")), reverse=True)
 
         for item in self.yearly_tree.get_children():
             self.yearly_tree.delete(item)
@@ -1578,6 +1667,11 @@ class App(tk.Tk):
                     e.get("title", ""),
                     e.get("timestamp", "")
                 ))
+            yr_children = self.yearly_tree.get_children()
+            if yr_children:
+                self.yearly_tree.selection_set(yr_children[0])
+                self.yearly_tree.focus(yr_children[0])
+                self.yearly_tree.see(yr_children[0])
         else:
             self.yearly_summary_lbl.configure(text=f"Empty — No results recorded yet for {selected}", fg=COL["dim"])
 
@@ -1589,9 +1683,27 @@ class App(tk.Tk):
         vals = self.logs_tree.item(selected[0], "values")
         if vals and len(vals) >= 6:
             pdf_name = vals[5]
-            pdf_path = RESULTS_ROOT / pdf_name
-            if pdf_path.is_file():
-                open_pdf_file(pdf_path)
+            ts = vals[0]
+            target_path = None
+            for entry in get_test_logs():
+                if entry.get("pdf_name") == pdf_name or entry.get("timestamp") == ts:
+                    cand = Path(entry.get("pdf_path", ""))
+                    if cand.is_file():
+                        target_path = cand
+                        break
+            if not target_path or not target_path.is_file():
+                cand = RESULTS_ROOT / pdf_name
+                if cand.is_file():
+                    target_path = cand
+            if not target_path or not target_path.is_file():
+                matches = list(RESULTS_ROOT.rglob(pdf_name))
+                if not matches:
+                    matches = list((BASE / "recorded_tests").rglob(pdf_name))
+                if matches:
+                    target_path = matches[0]
+
+            if target_path and target_path.is_file():
+                open_pdf_file(target_path)
             else:
                 messagebox.showwarning("File Not Found", f"Report file not found: {pdf_name}", parent=self)
 
@@ -1603,16 +1715,18 @@ class App(tk.Tk):
         vals = self.yearly_tree.item(selected[0], "values")
         if vals and len(vals) >= 3:
             ref = vals[0]
+            ts = vals[2]
             logs = get_test_logs()
             for e in logs:
                 if e.get("reference") == ref and str(e.get("year")) == self.selected_year.get():
-                    p = Path(e.get("pdf_path", ""))
-                    if p.is_file():
-                        open_pdf_file(p)
-                        return
+                    if not ts or e.get("timestamp") == ts:
+                        p = Path(e.get("pdf_path", ""))
+                        if p.is_file():
+                            open_pdf_file(p)
+                            return
             # Fallback search
             clean = ref.replace(".", "_").replace("(", "").replace(")", "").replace(" ", "")
-            for p in (RESULTS_ROOT).glob(f"*{clean}*.pdf"):
+            for p in RESULTS_ROOT.rglob(f"*{clean}*.pdf"):
                 open_pdf_file(p)
                 return
 
@@ -2231,6 +2345,14 @@ class App(tk.Tk):
             self._common_last_state=state
             monitor=getattr(self,"_pid_monitor",None)
             if monitor is not None and monitor.window.winfo_exists(): monitor.update(state)
+            if state.get("connected"):
+                if not self.flight_model_connected:
+                    self.flight_model_connected = True
+                    self._update_connection_ui()
+            if state.get("brunner_connected"):
+                if not self.cls2sim_connected:
+                    self.cls2sim_connected = True
+                    self._update_connection_ui()
             if state.get("test_reference"):
                 self._common_states[state["test_reference"]]=state
             if not hasattr(self,"_common_logged_outputs"): self._common_logged_outputs=set()
@@ -2239,6 +2361,7 @@ class App(tk.Tk):
                     if not any(entry.get("pdf_path")==output for entry in get_test_logs()):
                         append_test_log(state["test_reference"],state["title"],"Performance",state.get("mode","").title(),Path(output))
                     self._common_logged_outputs.add(output)
+                    self._refresh_dashboard_logs(sync_first=False)
                     if state.get("test_reference")==self._common_display_spec.reference:
                         self._refresh_common_references()
             self._render_common_state(state)
@@ -3026,9 +3149,18 @@ class App(tk.Tk):
                 self._test_defaults = {}
             self._test_defaults[spec.reference] = dict(defaults)
             channels = PDF_CHANNELS
+            g_list = [(label, column, tk.BooleanVar(value=True)) for label, column in channels]
             self._test_settings[spec.reference] = (
                 {key: tk.StringVar(value=value) for key, value in defaults.items()},
-                [(label, column, tk.BooleanVar(value=True)) for label, column in channels])
+                g_list)
+            spec.pdf_graphs = [(label, column) for label, column in channels]
+            def _make_sync(s=spec, gl=g_list):
+                def _do_sync(*_):
+                    s.pdf_graphs = [(lbl, col) for lbl, col, v in gl if v.get()]
+                return _do_sync
+            _sync_cb = _make_sync()
+            for _, _, var in g_list:
+                var.trace_add("write", _sync_cb)
         if not hasattr(self, "_graph_csv_paths"):
             self._graph_csv_paths = {}
         self._graph_csv_paths.setdefault(spec.reference, tk.StringVar())
@@ -3089,12 +3221,33 @@ class App(tk.Tk):
         self._label(box, "Graphs in PDF", 10, COL["text"], "bold").pack(anchor="w", pady=(10, 4))
         buttons = tk.Frame(box, bg="#FFFFFF")
         buttons.pack(fill="x")
-        for caption, checked in (("Select all", True), ("Clear all", False)):
-            ttk.Button(buttons, text=caption, state="normal" if unlocked else "disabled",
-                       command=lambda value=checked: [var.set(value) for _, _, var in graphs]).pack(side="left")
+
+        def _sync_graph_selection():
+            if spec.reference in self._test_settings:
+                _, g_list = self._test_settings[spec.reference]
+                spec.pdf_graphs = [(lbl, col) for lbl, col, v in g_list if v.get()]
+
+        def _set_all_graphs(value: bool):
+            if spec.reference in self._test_settings:
+                _, g_list = self._test_settings[spec.reference]
+                for _, _, v in g_list:
+                    v.set(value)
+                _sync_graph_selection()
+
+        ttk.Button(buttons, text="Select all", state="normal" if unlocked else "disabled",
+                   command=lambda: _set_all_graphs(True)).pack(side="left", padx=(0, 4))
+        ttk.Button(buttons, text="Clear all", state="normal" if unlocked else "disabled",
+                   command=lambda: _set_all_graphs(False)).pack(side="left")
+
         for label, column, var in graphs:
-            tk.Checkbutton(box, text=label, variable=var, bg="#FFFFFF", anchor="w",
-                           state="normal" if unlocked else "disabled", wraplength=225, justify="left").pack(fill="x")
+            cb = tk.Checkbutton(box, text=label, variable=var, bg="#FFFFFF", anchor="w",
+                                state="normal" if unlocked else "disabled", wraplength=225, justify="left",
+                                command=_sync_graph_selection)
+            cb.pack(fill="x")
+            try:
+                var.trace_add("write", lambda *_, s=_sync_graph_selection: s())
+            except Exception:
+                pass
         if not hasattr(self, "_graph_csv_paths"):
             self._graph_csv_paths = {}
         source = self._graph_csv_paths.setdefault(spec.reference, tk.StringVar())
@@ -3166,18 +3319,11 @@ class App(tk.Tk):
 
     def _update_connection_ui(self):
         if self.flight_model_connected:
-            if getattr(self, "p3d_paused", False):
-                self.btn_flight_model.configure_button(
-                    text="Sim Flight Model Connection: Connected (Waiting)",
-                    bg=COL["status_connected_bg"], fg=COL["status_connected_fg"],
-                    border=COL["status_connected_border"]
-                )
-            else:
-                self.btn_flight_model.configure_button(
-                    text="Sim Flight Model Connection: Connected",
-                    bg=COL["status_connected_bg"], fg=COL["status_connected_fg"],
-                    border=COL["status_connected_border"]
-                )
+            self.btn_flight_model.configure_button(
+                text="Sim Flight Model Connection: Connected",
+                bg=COL["status_connected_bg"], fg=COL["status_connected_fg"],
+                border=COL["status_connected_border"]
+            )
         else:
             self.btn_flight_model.configure_button(
                 text="Sim Flight Model Connection: Not Connected",
@@ -3213,15 +3359,44 @@ class App(tk.Tk):
 
     def _poll_p3d(self):
         try:
-            sample = self.p3d.snapshot()
-            if sample is not None:
-                if sample.connected:
-                    was_paused = getattr(self, "p3d_paused", False)
-                    was_connected = self.flight_model_connected
-                    self.flight_model_connected = True
-                    self.p3d_paused = bool(sample.paused)
-                    if not was_connected or (was_paused != self.p3d_paused):
-                        self._update_connection_ui()
+            # Auto-start bridge client if not running
+            if not self.p3d.running:
+                try:
+                    self.p3d.start()
+                except Exception:
+                    pass
+
+            sample = self.p3d.snapshot() if self.p3d.running else None
+            p3d_is_connected = False
+            if sample is not None and sample.connected:
+                p3d_is_connected = True
+                self.p3d_paused = bool(sample.paused)
+            elif getattr(self, "_common_last_state", {}).get("connected"):
+                p3d_is_connected = True
+
+            if p3d_is_connected != self.flight_model_connected:
+                self.flight_model_connected = p3d_is_connected
+                self._update_connection_ui()
+
+            # Auto-detect CLS2Sim
+            cls_is_connected = bool(getattr(self, "_common_last_state", {}).get("brunner_connected"))
+            if not cls_is_connected:
+                now_t = time.time()
+                if not hasattr(self, "_last_proc_check") or (now_t - self._last_proc_check > 2.0):
+                    self._last_proc_check = now_t
+                    try:
+                        import psutil
+                        self._cls_proc_running = any(p.name().lower() == "cls2sim.exe" for p in psutil.process_iter(['name']))
+                    except Exception:
+                        self._cls_proc_running = False
+                cls_is_connected = getattr(self, "_cls_proc_running", False)
+
+            if cls_is_connected != self.cls2sim_connected:
+                self.cls2sim_connected = cls_is_connected
+                self._update_connection_ui()
+
+            if sample is not None and sample.connected:
+                if True:
 
                     if self.recording_active and not self.p3d_paused:
                         now = time.time()
