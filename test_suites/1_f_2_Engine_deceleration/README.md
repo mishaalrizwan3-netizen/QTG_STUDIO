@@ -6,9 +6,9 @@ Official EASA CS-FSTD(A) Issue 2 performance validation test for piston engine t
 
 | Parameter | Default Value | Notes |
 | :--- | :--- | :--- |
-| **Flight Condition** | Approach or Landing | Airborne SEP profile |
-| **Altitude MSL** | 2000 ft | |
-| **Indicated Airspeed (IAS)** | 80 kts | |
+| **Flight Condition** | Ground | Ground run / static trim on runway |
+| **Altitude MSL** | 755 ft | Runway ground elevation |
+| **Indicated Airspeed (IAS)** | 0 kts | Stationary before throttle chop |
 | **Flaps** | 0 | |
 | **Throttle** | 100% | Full power before chop |
 | **Duration** | 21 seconds | 5.0 s baseline + 16.0 s response |

@@ -269,7 +269,7 @@ TESTS = [
              "± 10% Ti or ± 0.25 s | ± 10% Tt (Ti: 10% response, Tt: 90% go-around power)"),
     TestSpec("1.f.(2)", "Engine deceleration", "Performance", 61,
              "To demonstrate that the simulated engine deceleration conforms to the aeroplane.",
-             "Flt cond: Approach or Landing | Alt[ft]: 2000 | IAS[kts]: 80 | Flaps: 0 | Throttle[%]: 100",
+             "Flt cond: Ground | Alt[ft]: 755 | IAS[kts]: 0 | Flaps: 0 | Throttle[%]: 100",
              "± 10% Tt (Total time from initial throttle movement until 90% flight idle throttle movement)"),
 
     # --- Static Control Checks (5 tests) ---
@@ -2548,11 +2548,11 @@ class App(tk.Tk):
         info_box = tk.Frame(grid_card.inner, bg="#F8FAFC", padx=14, pady=12)
         info_box.pack(fill="x")
 
-        flt_cond_val = "Approach or Landing" if spec.reference in ("1.f.(1)", "1.f.(2)") else "Ground"
+        flt_cond_val = "Approach or Landing" if spec.reference == "1.f.(1)" else "Ground"
         profile_desc = (
             "Approach/Landing | Alt: 2000 ft | IAS: 80 kts | Flaps: 0 | Idle to 100% Throttle Step"
             if spec.reference == "1.f.(1)"
-            else "Approach/Landing | Alt: 2000 ft | IAS: 80 kts | Flaps: 0 | Full Power to Idle Throttle Chop"
+            else "Ground | Alt: 755 ft | IAS: 0 kts | Flaps: 0 | Full Power to Idle Throttle Chop"
         )
 
         current_exe = find_smk_engine_exe()
@@ -3121,8 +3121,10 @@ class App(tk.Tk):
             self._test_settings = {}
         if spec.reference not in self._test_settings:
             throttle_def = "5" if spec.reference == "1.f.(1)" else ("100" if spec.reference in ("1.f.(2)", "1.c.(1)") else "0")
-            flt_def = "Approach or Landing" if spec.reference in ("1.f.(1)", "1.f.(2)") else "Clean"
-            defaults = {"Flt cond": flt_def, "Alt[ft]": "2000", "IAS[kts]": "80", "Flaps": "0",
+            flt_def = "Approach or Landing" if spec.reference == "1.f.(1)" else ("Ground" if spec.reference == "1.f.(2)" else "Clean")
+            alt_def = "755" if spec.reference == "1.f.(2)" else ("3000" if spec.reference == "1.c.(1)" else "2000")
+            ias_def = "0" if spec.reference == "1.f.(2)" else "80"
+            defaults = {"Flt cond": flt_def, "Alt[ft]": alt_def, "IAS[kts]": ias_def, "Flaps": "0",
                         "Latitude[deg]": "32.235", "Longitude[deg]": "74.135",
                         "Throttle[%]": throttle_def,
                         "Temperature[C]": "15"}
