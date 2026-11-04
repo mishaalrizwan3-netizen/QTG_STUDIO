@@ -55,3 +55,13 @@ def install(window):
         finally:self.ref_manual_snapshot=original
     window._commit_initial_position=MethodType(commit,window)
     window._refresh_restored_airdata=MethodType(refresh,window)
+
+def run_initialization(window, mode, entry, policy=None):
+    if policy is not None and hasattr(policy, 'DURATION_SECONDS'):
+        window.target_duration_sec = policy.DURATION_SECONDS
+        if hasattr(window, 'txt_duration'):
+            try:
+                window.txt_duration.setText(str(policy.DURATION_SECONDS))
+            except Exception:
+                pass
+    return entry(window)

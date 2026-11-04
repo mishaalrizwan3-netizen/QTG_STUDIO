@@ -131,7 +131,8 @@ def apply_manual_conditions(window,values):
 
 def launch(mode, spec, output_dir, reference=None, duration_s=None, control_method="replay", pid_conditions=None, validation_csv=None, initial_conditions=None, selected_graphs=None):
     if mode not in ('manual','auto'): raise ValueError('Unknown test mode')
-    duration_s=validate_duration(75 if duration_s is None else duration_s)
+    policy=engine_test_policy(spec.reference)
+    duration_s=validate_duration(policy.DURATION_SECONDS if policy else (75 if duration_s is None else duration_s))
     initial_conditions=validate_conditions(initial_conditions)
     brunner_root()
     if control_method not in ('replay','pid'): raise ValueError('Unknown Automatic control method')
@@ -162,6 +163,16 @@ def launch(mode, spec, output_dir, reference=None, duration_s=None, control_meth
     return process,context
 
 
+def engine_test_policy(reference):
+    folders={'1.f.(1)':'1_f_1_Engine_acceleration','1.f.(2)':'1_f_2_Engine_deceleration'}
+    if reference not in folders:return None
+    root=(Path(sys._MEIPASS) if getattr(sys,'frozen',False) else Path(__file__).resolve().parent.parent)/'test_suites'
+    path=root/folders[reference]/'execution.py'
+    spec=importlib.util.spec_from_file_location('qtg_engine_policy',path)
+    module=importlib.util.module_from_spec(spec);spec.loader.exec_module(module)
+    return module
+
+
 def configure_test_extension(window, reference):
     """Load only an explicitly mapped test adapter, never alter BRUNNER modules."""
     for name,original in getattr(window,'_test_extension_originals',{}).items():
@@ -177,7 +188,9 @@ def configure_test_extension(window, reference):
     policy=read('qtg_engine_test_policy',root/folders[reference]/'execution.py')
     if policy.TEST_REFERENCE!=reference:raise RuntimeError('Test initialization policy mismatch.')
     if policy.USE_SETTLED_REFERENCE_ALTIMETER:
-        read('qtg_engine_initialization_adapter',root/'_shared/engine_initialization.py').install(window)
+        adapter=read('qtg_engine_initialization_adapter',root/'_shared/engine_initialization.py')
+        window._engine_test_adapter=adapter
+        adapter.install(window)
 
 
 def initialize_mode(window, mode, reference=None):
@@ -204,7 +217,10 @@ def initialize_mode(window, mode, reference=None):
         context['initialization_source']={
             'codebase':'brunner', 'entry_point':entry.__name__,
             'module':str(Path(base.__file__).resolve())}
-        entry(window)
+        policy=engine_test_policy(context['test_reference'])
+        window.target_duration_sec=policy.DURATION_SECONDS
+        context['duration_s']=policy.DURATION_SECONDS
+        window._engine_test_adapter.run_initialization(window,mode,entry,policy)
         return
     if mode=='manual': window.start_manual_test()
     elif mode=='auto' and getattr(window,'_control_method','replay')=='pid':

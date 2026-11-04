@@ -12,3 +12,6 @@ DEFAULT_CONDITIONS = {
     "Temperature[C]": "15"
 }
 DEFAULT_DURATION_S = 21
+
+DURATION_SECONDS = 21
+DEFAULT_INITIAL_CONDITIONS = {'alt_ft':2000.,'ias_kt':80.,'throttle':5.,'flaps':0.}
