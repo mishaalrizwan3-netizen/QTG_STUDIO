@@ -3138,7 +3138,23 @@ class App(tk.Tk):
             g_list = [(label, column, tk.BooleanVar(value=True)) for label, column in channels]
             self._test_settings[spec.reference] = (
                 {key: tk.StringVar(value=value) for key, value in defaults.items()},
-                [(label, column, tk.BooleanVar(value=True)) for label, column in channels])
+                g_list)
+            spec.pdf_graphs = [(label, column) for label, column in channels]
+            def _make_sync(s=spec, gl=g_list):
+                def _do_sync(*_):
+                    s.pdf_graphs = [(lbl, col) for lbl, col, v in gl if v.get()]
+                return _do_sync
+            _sync_cb = _make_sync()
+            for _, _, var in g_list:
+                var.trace_add("write", _sync_cb)
+
+    def _build_settings_panel(self, spec):
+        if hasattr(self, '_ensure_test_settings'):
+            self._ensure_test_settings(spec)
+        else:
+            App._ensure_test_settings(self, spec)
+        for widget in self.settings_panel.winfo_children():
+            widget.destroy()
         if not hasattr(self, "_graph_csv_paths"):
             self._graph_csv_paths = {}
         self._graph_csv_paths.setdefault(spec.reference, tk.StringVar())

@@ -38,4 +38,39 @@ class EngineAdapterTests(unittest.TestCase):
             with self.assertRaisesRegex(RuntimeError,'cancelled'):host._refresh_restored_airdata()
             self.assertIs(host.ref_manual_snapshot,original)
             self.assertEqual(original['telemetry']['indicated_altitude'],1985.)
+    def test_manual_uses_test_settings_instead_of_standalone_defaults(self):
+        import threading
+        for settings in ({},{'alt_ft':2500.,'ias_kt':90.,'throttle':12.,'flaps':1.}):
+            cfg=dict(alt_ft=2000.,ias_kt=80.,throttle=5.,flaps=0.);cfg.update(settings)
+            sim=Mock();sim.wait_for_paused.return_value=True
+            host=SimpleNamespace(p3d=sim,brunner=Mock(),stop_worker_event=threading.Event(),
+                _session_context={'initial_conditions':settings},_base_module=SimpleNamespace(
+                    STAGE_INITIALIZING='Initializing',STAGE_CONNECTED_READY='Ready',STAGE_CONNECTION_ERROR='Failed'),
+                _update_stage_ui=Mock(),_wait_for_initial_altitude=Mock(),sig_update_stage=Mock(),
+                _refresh_paused_telemetry=Mock(return_value=dict(pressure_alt=cfg['alt_ft'],airspeed_indicated=cfg['ias_kt'],
+                    engine_throttle_percent=cfg['throttle'],measured_flaps_handle_index=cfg['flaps'])))
+            policy=SimpleNamespace(DEFAULT_INITIAL_CONDITIONS=dict(alt_ft=2000.,ias_kt=80.,throttle=5.,flaps=0.),DURATION_SECONDS=21)
+            entry=Mock();adapter.run_initialization(host,'manual',entry,policy)
+            host.preparation_thread.join(2)
+            self.assertFalse(host.preparation_thread.is_alive())
+            self.assertEqual(sim.set_position_airborne.call_args.kwargs['alt_ft'],cfg['alt_ft'])
+            sim.set_initial_throttle.assert_called_once_with(cfg['throttle'])
+            sim.set_flaps_handle_index.assert_called_once_with(cfg['flaps'])
+            self.assertEqual(host.target_duration_sec,21)
+            self.assertEqual(host.sig_update_stage.emit.call_args.args[0],'Ready')
+            entry.assert_not_called()
+
+    def test_incompatible_reference_is_rejected_before_base_initialization(self):
+        with tempfile.TemporaryDirectory() as folder:
+            path=Path(folder)/'manual.csv'
+            path.write_text('Altitude MSL (ft),Indicated Airspeed (kts),Throttle 1 Position (%)\n3000,80,81\n')
+            host=SimpleNamespace(selected_ref_csv=path,_session_context={})
+            policy=SimpleNamespace(DEFAULT_INITIAL_CONDITIONS=dict(alt_ft=2000.,ias_kt=80.,throttle=5.,flaps=0.),DURATION_SECONDS=21)
+            entry=Mock()
+            with self.assertRaisesRegex(ValueError,'does not match'):adapter.run_initialization(host,'auto',entry,policy)
+            entry.assert_not_called()
+            path.write_text('Altitude MSL (ft),Indicated Airspeed (kts),Throttle 1 Position (%)\n2000,80,5\n')
+            adapter.run_initialization(host,'auto',entry,policy)
+            entry.assert_called_once_with(host)
+
 if __name__=='__main__':unittest.main()

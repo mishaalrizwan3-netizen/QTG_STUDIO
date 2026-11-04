@@ -218,9 +218,13 @@ def initialize_mode(window, mode, reference=None):
             'codebase':'brunner', 'entry_point':entry.__name__,
             'module':str(Path(base.__file__).resolve())}
         policy=engine_test_policy(context['test_reference'])
-        window.target_duration_sec=policy.DURATION_SECONDS
-        context['duration_s']=policy.DURATION_SECONDS
-        window._engine_test_adapter.run_initialization(window,mode,entry,policy)
+        if policy is not None and hasattr(policy, 'DURATION_SECONDS'):
+            window.target_duration_sec=policy.DURATION_SECONDS
+            context['duration_s']=policy.DURATION_SECONDS
+            if hasattr(window, 'txt_duration'):
+                try: window.txt_duration.setText(str(policy.DURATION_SECONDS))
+                except Exception: pass
+        entry(window)
         return
     if mode=='manual': window.start_manual_test()
     elif mode=='auto' and getattr(window,'_control_method','replay')=='pid':

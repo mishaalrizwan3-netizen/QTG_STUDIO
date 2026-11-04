@@ -57,11 +57,46 @@ def install(window):
     window._refresh_restored_airdata=MethodType(refresh,window)
 
 def run_initialization(window, mode, entry, policy=None):
-    if policy is not None and hasattr(policy, 'DURATION_SECONDS'):
-        window.target_duration_sec = policy.DURATION_SECONDS
-        if hasattr(window, 'txt_duration'):
-            try:
-                window.txt_duration.setText(str(policy.DURATION_SECONDS))
-            except Exception:
-                pass
-    return entry(window)
+    if policy is None:return entry(window)
+    window.target_duration_sec=policy.DURATION_SECONDS
+    cfg=dict(policy.DEFAULT_INITIAL_CONDITIONS)
+    cfg.update(window._session_context.get('initial_conditions') or {})
+    if mode=='auto':
+        with Path(window.selected_ref_csv).open(newline='',encoding='utf-8-sig') as stream:
+            row=next(csv.DictReader(stream))
+        mismatches=[]
+        for key,column,tolerance in [('alt_ft','Altitude MSL (ft)',25.),('ias_kt','Indicated Airspeed (kts)',2.),('throttle','Throttle 1 Position (%)',1.)]:
+            try:actual=float(row[column])
+            except (KeyError,ValueError,TypeError):raise ValueError('Manual reference is missing '+column)
+            if not math.isfinite(actual) or abs(actual-cfg[key])>tolerance:
+                mismatches.append(f'{column}: CSV={actual:g}, Test settings={cfg[key]:g}')
+        if mismatches:raise ValueError('Manual reference does not match engine Test settings: '+ '; '.join(mismatches)+'. Record/select a matching Manual CSV. Change initial conditions only in Test settings.')
+        return entry(window)
+    import threading
+    base=window._base_module
+    window.test_mode='manual';window.stop_worker_event.clear()
+    window._update_stage_ui(base.STAGE_INITIALIZING,'Applying engine Test settings.')
+    def prepare():
+        try:
+            sim=window.p3d
+            window.brunner.prepare_manual_mode()
+            if window.stop_worker_event.is_set():raise RuntimeError('Engine initialization cancelled.')
+            sim.set_position_airborne(alt_ft=cfg['alt_ft'],speed_kts=cfg['ias_kt'],pitch_deg=0.,bank_deg=0.,
+                hdg_deg=0.,lat=cfg.get('lat',32.235),lon=cfg.get('lon',74.135))
+            window._wait_for_initial_altitude(cfg['alt_ft'])
+            if not sim.wait_for_paused(3.):raise RuntimeError('Simulator did not confirm pause.')
+            if not sim.set_flaps_handle_index(cfg['flaps']):raise RuntimeError('Initial flaps rejected.')
+            if not sim.set_initial_throttle(cfg['throttle']):raise RuntimeError('Initial throttle rejected.')
+            if window.stop_worker_event.is_set():raise RuntimeError('Engine initialization cancelled.')
+            actual=window._refresh_paused_telemetry()
+            for key,target,tolerance in [('pressure_alt',cfg['alt_ft'],25.),('airspeed_indicated',cfg['ias_kt'],2.),
+                    ('engine_throttle_percent',cfg['throttle'],1.),('measured_flaps_handle_index',cfg['flaps'],.1)]:
+                value=float(actual.get(key,float('nan')))
+                if not math.isfinite(value) or abs(value-target)>tolerance:
+                    raise RuntimeError(f'Engine initial-condition mismatch: {key}, requested {target:g}, actual {value:g}')
+            window.sig_update_stage.emit(base.STAGE_CONNECTED_READY,'Engine Test settings applied; ready to record 21 seconds.')
+        except Exception as error:
+            window.p3d.pause_sim()
+            window.sig_update_stage.emit(base.STAGE_CONNECTION_ERROR,str(error))
+    window.preparation_thread=threading.Thread(target=prepare,daemon=True)
+    window.preparation_thread.start()
