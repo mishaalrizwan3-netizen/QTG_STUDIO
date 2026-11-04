@@ -1,0 +1,14 @@
+V2.1.3 ENGINE CHANNEL QUALITY CHECK - diagnostic only
+Actual P3D source measurements. No RPM is guessed or manufactured.
+
+Manual: Super_Mushak_manual_takeoff_data_2026-11-02_10-22-41_legacy_plot.csv
+  engine_rpm: measured_high_rate | high-rate samples=590, min=945.5686732620528, max=2706.324707732009 | legacy samples=25, min=945.6, max=2706.3
+  prop_rpm: measured_high_rate | high-rate samples=590, min=945.5686732620528, max=2706.324707732009 | legacy samples=25, min=945.6, max=2706.3
+  high-rate ground_speed_kt: samples=590, min=0.001465107805748, max=16.03302368601302
+  native 1-Hz Ground Speed (kt): samples=25, min=0.0, max=15.44
+
+Automatic: Super_Mushak_auto_takeoff_data_2026-11-02_10-23-51.csv
+  engine_rpm: measured_high_rate | high-rate samples=583, min=945.5693758977792, max=2703.3778541570423 | legacy samples=25, min=945.6, max=2701.0
+  prop_rpm: measured_high_rate | high-rate samples=583, min=945.5693758977792, max=2703.3778541570423 | legacy samples=25, min=945.6, max=2701.0
+  high-rate ground_speed_kt: samples=583, min=0.0014709441707506, max=16.15549515777451
+  native 1-Hz Ground Speed (kt): samples=25, min=0.0, max=15.47

@@ -1,0 +1,10 @@
+{
+  "ok": true,
+  "bridge_version": 1515,
+  "reference": "D:\\Super_Mushak_Logger_Data\\Super_Mushak_manual_takeoff_data_2026-11-02_15-50-11_init_conditions.json",
+  "mixture_target": 56.577652142419446,
+  "mixture_measured": 56.577652142419446,
+  "propeller_target": 100.0,
+  "propeller_measured": 100.0,
+  "paused": true
+}

@@ -1,0 +1,10 @@
+{
+  "test_reference": "1.c.(1)",
+  "title": "Normal climb -- all engines operating",
+  "mode": "manual",
+  "reference_csv": null,
+  "status_file": "C:\\Users\\Qasim 007\\Desktop\\QTG_Studio\\QTG_Studio_Antigravity_Single_Main\\recorded_tests\\sessions\\1793692865994597400_status.json",
+  "stop_file": "C:\\Users\\Qasim 007\\Desktop\\QTG_Studio\\QTG_Studio_Antigravity_Single_Main\\recorded_tests\\sessions\\1793692865994597400_stop",
+  "result_directory": "C:\\Users\\Qasim 007\\Desktop\\QTG_Studio\\QTG_Studio_Antigravity_Single_Main\\recorded_tests",
+  "initialization_policy": "brunner source defaults for Manual; selected Manual t0 for Automatic"
+}

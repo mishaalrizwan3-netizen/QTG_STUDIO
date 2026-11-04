@@ -1,0 +1,24 @@
+{
+  "ok": true,
+  "bridge_version": 1517,
+  "bridge": "C:\\Users\\Qasim 007\\Desktop\\QTG_Studio\\brunner\\native\\bin\\p3d_bridge_engine_init_v1517.dll",
+  "base": "C:\\Users\\Qasim 007\\Desktop\\QTG_Studio\\brunner\\Super_Mushak_Logger_GUI.py",
+  "p3d_driver": "C:\\Users\\Qasim 007\\Desktop\\QTG_Studio\\brunner\\src\\p3d_simconnect_v15.py",
+  "hardware_connected": false,
+  "execution_methods_identical": [
+    "start_manual_test",
+    "start_auto_test_only",
+    "arm_recording",
+    "_manual_recording_loop",
+    "_restore_reference_state",
+    "_prepare_reference_power",
+    "_wait_for_reference_rpm",
+    "_refresh_restored_airdata"
+  ],
+  "visible_windows": 0,
+  "record_command": true,
+  "blocked_recording": true,
+  "stop_command": true,
+  "shutdown_command": true,
+  "live_status": true
+}

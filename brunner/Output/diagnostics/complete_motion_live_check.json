@@ -1,0 +1,62 @@
+{
+  "airspeed_indicated": {
+    "manual": 79.80023956298828,
+    "paused": 81.73220825195312,
+    "first_frames": 81.73220825195312
+  },
+  "velocity_body_x": {
+    "manual": 0.0010204635825076774,
+    "paused": 0.0010204635825076774,
+    "first_frames": 0.0010204635825076774
+  },
+  "velocity_body_y": {
+    "manual": -0.29407164183384743,
+    "paused": -0.29407164183384743,
+    "first_frames": -0.29407164183384743
+  },
+  "velocity_body_z": {
+    "manual": 140.95213141526662,
+    "paused": 140.95213141526662,
+    "first_frames": 140.95213141526662
+  },
+  "velocity_world_y": {
+    "manual": -0.2958418258986478,
+    "paused": -0.2958418258986478,
+    "first_frames": -0.2958418258986478
+  },
+  "aircraft_wind_x_kt": {
+    "manual": -0.018346279881524822,
+    "paused": -8.106865835880363,
+    "first_frames": -8.106865835880363
+  },
+  "relative_wind_body_x_fps": {
+    "manual": -0.02996498651427261,
+    "paused": -9.327359450434152,
+    "first_frames": -9.327359450434152
+  },
+  "indicated_altitude": {
+    "manual": 3562.552490234375,
+    "paused": 2992.73046875,
+    "first_frames": 2992.73046875
+  },
+  "vertical_speed": {
+    "manual": 919.0651702880841,
+    "paused": 919.0651702880841,
+    "first_frames": 919.0651702880841
+  },
+  "engine_rpm": {
+    "manual": 2632.510845113024,
+    "paused": 2687.456320728953,
+    "first_frames": 2687.456320728953
+  },
+  "engine_throttle_percent": {
+    "manual": 81.402587890625,
+    "paused": 81.396484375,
+    "first_frames": 81.396484375
+  },
+  "pressure_alt": {
+    "manual": 2999.997241199681,
+    "paused": 2999.997241199681,
+    "first_frames": 2999.997241199681
+  }
+}

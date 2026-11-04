@@ -1,0 +1,33 @@
+{
+  "kind": "acceleration",
+  "post_seconds": 15.0,
+  "event_time_s": 7.6186583042144775,
+  "baseline_throttle_pct": 5.000000074505806,
+  "trigger": "2 percentage-point directional throttle change",
+  "status": "complete",
+  "qualification_status": "Not assessed: aircraft validation data required",
+  "control_equality_assessed": false,
+  "control_graphs_in_report": false,
+  "last_elapsed_s": 23.0187726020813,
+  "base": "climb V15.12.5 compatible BRUNNER",
+  "brunner_precheck_tolerance_norm": 0.12,
+  "brunner_follow_abort_tolerance_norm": 0.9,
+  "brunner_control_accuracy_independently_verified": false,
+  "qualification_eligible": false,
+  "start_requests": {
+    "ias": 80.0,
+    "alt_msl": 2000.0
+  },
+  "active_cls_axes": [
+    "Pitch"
+  ],
+  "critical_parameter_kind": "map",
+  "yaw_p3d_authority": "Original Air Manager / existing CLS2Sim vJoy (QTG does not write Yaw)",
+  "yaw_cls_hardware_qualification_assessed": false,
+  "yaw_qtg_calibration_enabled": false,
+  "yaw_qtg_replay_enabled": false,
+  "yaw_control_equalities_assessed": false,
+  "external_airmanager_rudder_effect_uncontrolled": true,
+  "source_csv": "Super_Mushak_manual_takeoff_data_2026-11-02_10-25-04.csv",
+  "selected_manual": null
+}

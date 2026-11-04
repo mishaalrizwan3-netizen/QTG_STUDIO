@@ -1,0 +1,10 @@
+V2.1.3 ENGINE CHANNEL QUALITY CHECK - diagnostic only
+Actual P3D source measurements. No RPM is guessed or manufactured.
+
+Manual: Super_Mushak_manual_takeoff_data_20261030_141512_legacy_plot.csv
+  engine_rpm: missing_high_rate_legacy_disagrees | high-rate samples=0, min=None, max=None | legacy samples=14, min=2699.0744455883464, max=2699.1136930882617
+    SOURCE CONFLICT: high-rate RPM is zero/missing but recorded 1-Hz P3D RPM is nonzero. Check P3D bridge timing/data; the report displays both sources without substituting either.
+  prop_rpm: missing_high_rate_legacy_disagrees | high-rate samples=0, min=None, max=None | legacy samples=14, min=2591.1114677648125, max=2591.149145364732
+    SOURCE CONFLICT: high-rate RPM is zero/missing but recorded 1-Hz P3D RPM is nonzero. Check P3D bridge timing/data; the report displays both sources without substituting either.
+  high-rate ground_speed_kt: samples=0, min=unavailable, max=unavailable
+  native 1-Hz Ground Speed (kt): samples=14, min=77.37670135498047, max=93.30241394042967

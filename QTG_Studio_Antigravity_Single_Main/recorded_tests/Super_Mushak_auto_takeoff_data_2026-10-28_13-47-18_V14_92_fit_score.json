@@ -1,0 +1,72 @@
+{
+  "legacy_profile": null,
+  "legacy_profile_key": null,
+  "mean_normalized_mae": 17.86020979284369,
+  "metrics": {
+    "Bank": {
+      "mae": 47.49101694915254,
+      "max_abs": 68.72999999999999,
+      "n": 59,
+      "normalization": 1.0,
+      "rms": 50.83146608221916
+    },
+    "Heading": {
+      "mae": 76.8342372881356,
+      "max_abs": 178.85000000000002,
+      "n": 59,
+      "normalization": 2.0,
+      "rms": 93.62243673936793
+    },
+    "IAS": {
+      "mae": 20.43084745762712,
+      "max_abs": 42.53,
+      "n": 59,
+      "normalization": 2.0,
+      "rms": 24.371614149891396
+    },
+    "Pitch": {
+      "mae": 9.361525423728814,
+      "max_abs": 21.17,
+      "n": 59,
+      "normalization": 1.0,
+      "rms": 10.415728735174786
+    },
+    "PitchRate": {
+      "mae": 10.42949152542373,
+      "max_abs": 19.27,
+      "n": 59,
+      "normalization": 0.5,
+      "rms": 12.096716601721845
+    },
+    "ROC": {
+      "mae": 1533.0938983050848,
+      "max_abs": 3415.91,
+      "n": 59,
+      "normalization": 100.0,
+      "rms": 1764.8345586379228
+    },
+    "RPM": {
+      "mae": 52.937288135593214,
+      "max_abs": 94.5,
+      "n": 59,
+      "normalization": 50.0,
+      "rms": 60.39324661986749
+    },
+    "RollRate": {
+      "mae": 1.4991525423728813,
+      "max_abs": 3.9,
+      "n": 59,
+      "normalization": 0.5,
+      "rms": 1.749184313533558
+    },
+    "YawRate": {
+      "mae": 7.504915254237289,
+      "max_abs": 9.629999999999999,
+      "n": 59,
+      "normalization": 0.5,
+      "rms": 7.8540924234828156
+    }
+  },
+  "selected_manual": "D:\\Super_Mushak_Logger_Data\\Super_Mushak_manual_takeoff_data_2026-10-28_13-44-42.csv",
+  "version": "V14.95-final"
+}

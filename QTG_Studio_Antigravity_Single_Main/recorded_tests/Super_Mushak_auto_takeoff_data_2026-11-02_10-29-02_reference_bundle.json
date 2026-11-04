@@ -1,0 +1,30 @@
+{
+  "schema": "SuperMushak-V14.32-ExactReferenceBundle-v1",
+  "bundle_id": "8c7211201edc029e",
+  "manual_csv": "C:\\Users\\R&D Lab 4\\Documents\\SMK_Engine_From_Climb\\acceleration\\Super_Mushak_manual_takeoff_data_2026-11-02_10-27-21.csv",
+  "replay_json": "C:\\Users\\R&D Lab 4\\Documents\\SMK_Engine_From_Climb\\acceleration\\Super_Mushak_manual_takeoff_data_2026-11-02_10-27-21_replay.json",
+  "state_json": "C:\\Users\\R&D Lab 4\\Documents\\SMK_Engine_From_Climb\\acceleration\\Super_Mushak_manual_takeoff_data_2026-11-02_10-27-21_initial_state_v1466_recovered.json",
+  "hashes": {
+    "manual_csv": "c0cbeb20ae91363c3da5d3ca602ab9ebcf81fff9511c338a574b9e6c82971627",
+    "replay_json": "dae7daa52df97e0fd2be85f51a66b7ce447ae53044c1216ca1a9d01faff708d8",
+    "state_json": "28b3469ab90cadcfb6202afbec687f050cf6134f39933518f83cf6609da49e4a"
+  },
+  "manual_t0": {
+    "alt_ft": 1995.64,
+    "ias_kts": 78.36,
+    "pitch_deg": -0.79,
+    "bank_deg": -0.01,
+    "heading_deg": 46.53
+  },
+  "state_t0": {
+    "altitude_ft": 1995.635816470865,
+    "ias_kts": 78.3586654663086,
+    "pitch_deg": -0.7890245201369305,
+    "bank_deg": -0.008585070293094728,
+    "magnetic_heading_deg": 46.530572906523034,
+    "true_heading_deg": 48.399914573859135
+  },
+  "automatic_csv": "C:\\Users\\R&D Lab 4\\Documents\\SMK_Engine_From_Climb\\acceleration\\Super_Mushak_auto_takeoff_data_2026-11-02_10-29-02.csv",
+  "automatic_generated_at": "2026-11-02T10:29:03.253146",
+  "binding_rule": "ONE exact Manual CSV + its matching replay JSON + its matching initial-state JSON are used for initialization, replay and report."
+}

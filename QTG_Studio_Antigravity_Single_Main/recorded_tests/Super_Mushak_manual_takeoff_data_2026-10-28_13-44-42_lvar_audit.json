@@ -1,0 +1,5 @@
+{
+  "status": "NOT_AVAILABLE_VIA_SIMCONNECT",
+  "reason": "Prepar3D L: variables require a gauge-side API bridge; V14.95 does not invent or enumerate L-vars.",
+  "impact": "All applicable standard SimVars are captured; aircraft-specific custom L-vars remain a separate optional audit surface."
+}

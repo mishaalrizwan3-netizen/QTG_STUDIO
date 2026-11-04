@@ -1,0 +1,26 @@
+{
+  "ok": true,
+  "checks": [
+    "import: numpy",
+    "import: pandas",
+    "import: matplotlib",
+    "import: PIL",
+    "import: tkinter",
+    "import: PySide6.QtWidgets",
+    "import: SMK_Engine_From_Climb",
+    "import: climb_brunner_v15125",
+    "import: engine_report_v2",
+    "import: plot_graphs",
+    "Qt platform plugin and widget rendering",
+    "native libraries and position ABI",
+    "supplied V4.1 PID algorithms available without standalone GUI/bridge",
+    "all 58 SEP GUI mode buttons route to the common BRUNNER engine",
+    "all 29 SEP test screens, password panel, graph choices, defaults",
+    "per-test progress isolation and connection labels",
+    "original PID GUI loads gains and graphs without its independent hardware worker",
+    "embedded status/telemetry/progress and blocked/ready recording controls",
+    "PID report without Manual recording; missing validation never passes",
+    "PDF generation from bundled runtime"
+  ],
+  "frozen": false
+}

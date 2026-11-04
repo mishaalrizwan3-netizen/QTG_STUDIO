@@ -1,0 +1,7 @@
+__pycache__/
+*.pyc
+test_notes.json
+build/
+dist/
+*.obj
+*.exp

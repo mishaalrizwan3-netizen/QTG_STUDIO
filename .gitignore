@@ -1,0 +1,43 @@
+# ==============================================================================
+# Git Ignore for QTG Studio Project
+# Excludes virtual environments, large build binaries, zip archives, and caches
+# ==============================================================================
+
+# Virtual Environments (Crucial: prevents pushing huge packages like PySide6 ~200MB)
+.venv/
+venv/
+env/
+ENV/
+env.bak/
+venv.bak/
+
+# Python byte-code and cache
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyd
+
+# Build and Distribution artifacts
+build/
+dist/
+release_backups/
+_archive/
+_internal/
+*.zip
+*.tar.gz
+*.pkg
+*.exe
+*.obj
+*.exp
+
+# Logs and temporary diagnostics
+*.log
+startup_error.log
+.system_generated/
+
+# OS and IDE configuration
+.idea/
+.vscode/
+Thumbs.db
+Desktop.ini
+$RECYCLE.BIN/

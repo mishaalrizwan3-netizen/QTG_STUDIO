@@ -1,0 +1,11 @@
+{
+  "trim_elevator_angle_rad": -1.0652644360316953e-07,
+  "trim_elevator_percent": -0.006103515625,
+  "trim_aileron_percent": 0.0,
+  "trim_rudder_percent": 0.0,
+  "surface_elevator_rad": 0.03993410054573818,
+  "surface_aileron_left_rad": 0.0003570579968301937,
+  "surface_aileron_right_rad": 0.00047936899621426287,
+  "surface_rudder_rad": -7.989483270237714e-07,
+  "bridge_version": 1513
+}

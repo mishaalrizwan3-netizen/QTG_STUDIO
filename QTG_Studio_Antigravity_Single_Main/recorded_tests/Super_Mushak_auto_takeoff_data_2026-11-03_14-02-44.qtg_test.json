@@ -1,0 +1,12 @@
+{
+  "test_reference": "1.c.(1)",
+  "title": "Normal climb -- all engines operating",
+  "mode": "auto",
+  "reference_csv": "D:\\Super_Mushak_Logger_Data\\Super_Mushak_manual_takeoff_data_2026-11-03_13-56-20.csv",
+  "duration_s": 75,
+  "command_directory": "C:\\Users\\Qasim 007\\Desktop\\QTG_Studio\\QTG_Studio_Antigravity_Single_Main\\recorded_tests\\sessions\\1793696430084960900_commands",
+  "status_file": "C:\\Users\\Qasim 007\\Desktop\\QTG_Studio\\QTG_Studio_Antigravity_Single_Main\\recorded_tests\\sessions\\1793696430084960900_status.json",
+  "stop_file": "C:\\Users\\Qasim 007\\Desktop\\QTG_Studio\\QTG_Studio_Antigravity_Single_Main\\recorded_tests\\sessions\\1793696430084960900_stop",
+  "result_directory": "C:\\Users\\Qasim 007\\Desktop\\QTG_Studio\\QTG_Studio_Antigravity_Single_Main\\recorded_tests",
+  "initialization_policy": "brunner source defaults for Manual; selected Manual t0 for Automatic"
+}

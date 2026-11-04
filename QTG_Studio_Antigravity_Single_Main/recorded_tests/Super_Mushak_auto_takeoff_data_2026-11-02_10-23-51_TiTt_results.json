@@ -1,0 +1,82 @@
+{
+  "software": "SMK Engine V2.1.3 Ti/Tt supplemental assessment",
+  "basis": "EASA CS-FSTD(A) Issue 2, 1.f(1)/(2)",
+  "mode": "deceleration",
+  "parameter_kind": "map",
+  "critical_parameter": "manifold_inhg",
+  "measurements": {
+    "Manual": {
+      "name": "Manual",
+      "mode": "deceleration",
+      "parameter": "map",
+      "t_start": 8.349149222373962,
+      "t_10": 8.372072638743246,
+      "t_90": 8.609265356765606,
+      "Ti_s": 0.02292341636928441,
+      "Tt_s": 0.2601161343916445,
+      "initial_parameter": 27.34142664274827,
+      "final_parameter": 5.975286469884249,
+      "throttle_initial_pct": 100.0,
+      "throttle_final_pct": 5.000000074505806,
+      "status": "MEASURED",
+      "warnings": [],
+      "columns": {
+        "time": "time_s",
+        "throttle": "throttle_pct",
+        "critical_parameter": "manifold_inhg",
+        "source_file": "C:\\Users\\R&D Lab 4\\Documents\\SMK_Engine_From_Climb\\deceleration\\Super_Mushak_manual_takeoff_data_2026-11-02_10-22-41_engine_channels.csv",
+        "median_interval_s": 0.03998160362243652
+      }
+    },
+    "Automatic": {
+      "name": "Automatic",
+      "mode": "deceleration",
+      "parameter": "map",
+      "t_start": 8.44293948173523,
+      "t_10": 8.458272500343785,
+      "t_90": 8.70126558467622,
+      "Ti_s": 0.015333018608554738,
+      "Tt_s": 0.25832610294098934,
+      "initial_parameter": 27.339952513975426,
+      "final_parameter": 5.975283677396948,
+      "throttle_initial_pct": 99.993896484375,
+      "throttle_final_pct": 5.000000074505806,
+      "status": "MEASURED",
+      "warnings": [],
+      "columns": {
+        "time": "time_s",
+        "throttle": "throttle_pct",
+        "critical_parameter": "manifold_inhg",
+        "source_file": "C:\\Users\\R&D Lab 4\\Documents\\SMK_Engine_From_Climb\\deceleration\\Super_Mushak_auto_takeoff_data_2026-11-02_10-23-51_engine_channels.csv",
+        "median_interval_s": 0.04001760482788086
+      }
+    }
+  },
+  "comparisons": [
+    {
+      "label": "Automatic vs Manual",
+      "assessment_type": "manual_vs_automatic_engineering",
+      "metrics": {
+        "Ti": {
+          "observed_s": 0.015333018608554738,
+          "reference_s": 0.02292341636928441,
+          "difference_s": -0.007590397760729672,
+          "allowed_s": 0.25,
+          "status": "WITHIN_TOLERANCE"
+        },
+        "Tt": {
+          "observed_s": 0.25832610294098934,
+          "reference_s": 0.2601161343916445,
+          "difference_s": -0.0017900314506551496,
+          "allowed_s": 0.02601161343916445,
+          "status": "WITHIN_TOLERANCE"
+        }
+      },
+      "status": "WITHIN_TOLERANCE"
+    }
+  ],
+  "status": "WITHIN_TOLERANCE",
+  "qualification_status": "NOT_ASSESSED",
+  "qualification_note": "Manual-vs-Automatic time agreement is an engineering repeatability check, not EASA qualification. An accepted independent aircraft reference, matched conditions, and justified power parameter are required.",
+  "reference_type": "recorded Manual repeatability baseline"
+}
