@@ -1109,7 +1109,11 @@ class SuperMushakLoggerApp(QMainWindow):
                     actual_alt = float(fresh.get('pressure_alt', float('nan')))
                     if not all(math.isfinite(v) for v in (actual_ias, actual_alt)):
                         raise RuntimeError('Missing flight-state feedback during engine RPM initialization.')
-                    if abs(actual_ias-reference_ias) > 2.0 or abs(actual_alt-reference_alt) > 25.0:
+                    # This is a live warm-up envelope, not final replay readiness.
+                    # A 2 kt reset threshold repeatedly teleports a healthy 80->82.6 kt
+                    # initialization before engine RPM can settle. The caller restores
+                    # the exact Manual state afterwards and retains its final 2 kt check.
+                    if abs(actual_ias-reference_ias) > 5.0 or abs(actual_alt-reference_alt) > 25.0:
                         samples.clear()  # Never accept RPM measured outside the reference flight state.
                         if now-started >= 20.0:
                             raise RuntimeError(f'Engine initialization drifted from Manual flight conditions: IAS={actual_ias:.1f} kt (target {reference_ias:.1f}), MSL={actual_alt:.0f} ft (target {reference_alt:.0f}). Replay remains blocked.')
