@@ -1175,7 +1175,7 @@ class SuperMushakLoggerApp(QMainWindow):
                 wind_ready = wind_target is None or (math.isfinite(actual_wind) and
                     abs(actual_wind-wind_target) <= max(0.5,wind_target*0.1))
                 offset = float(fresh.get("indicated_altitude", float("nan"))) - float(fresh.get("pressure_alt", float("nan")))
-                altitude_ready = expected_offset is None or (math.isfinite(offset) and abs(offset - expected_offset) <= 10.0)
+                altitude_ready = expected_offset is None or (math.isfinite(offset) and abs(offset) <= 10.0) or (math.isfinite(offset) and abs(offset - expected_offset) <= 10.0)
                 stable = stable + 1 if elapsed >= 2.0 and wind_ready and altitude_ready else 0
                 if elapsed - last_status >= 5.0:
                     print(f"[Auto Prep] Waiting for local airflow/altimeter: {elapsed:.1f}s, "
@@ -1218,7 +1218,7 @@ class SuperMushakLoggerApp(QMainWindow):
                 try:
                     validate_initial_airspeed(fresh,self.ref_manual_snapshot["airspeed"])
                     offset=float(fresh["indicated_altitude"])-float(fresh["pressure_alt"])
-                    if time.monotonic()-started>=0.2 and (expected is None or abs(offset-expected)<=10):
+                    if time.monotonic()-started>=0.2 and (expected is None or abs(offset)<=10.0 or abs(offset-expected)<=10.0):
                         return
                 except (ValueError,KeyError):
                     pass
@@ -1861,7 +1861,7 @@ class SuperMushakLoggerApp(QMainWindow):
             }
             if getattr(self,'control_method','replay')=='pid':
                 init_dict['pid_run']={key:value for key,value in getattr(self,'_session_context',{}).items()
-                    if key in ('initial_conditions','pid_conditions','pid_profile','pid_workflow','pid_initial_readback','pid_temperature_check','pid_aircraft_settling','pid_stabilization','pid_forwarding_check','pid_complete','pid_fault','duration_s')}
+                    if key in ('initial_conditions','pid_conditions','pid_profile','pid_guidance_initialization','pid_workflow','pid_initial_readback','pid_temperature_check','pid_aircraft_settling','pid_stabilization','pid_forwarding_check','pid_complete','pid_fault','duration_s')}
             with open(json_filename, "w", encoding="utf-8") as jf:
                 json.dump(init_dict, jf, indent=2, default=str)
             print(f"[OK] Initial conditions JSON saved: {json_filename}")

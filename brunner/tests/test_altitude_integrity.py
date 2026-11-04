@@ -11,6 +11,8 @@ class AltitudeIntegrityTests(unittest.TestCase):
         self.assertEqual(reference_altimeter_offset({'telemetry':{'indicated_altitude':3562.55,'pressure_alt':3000.,'baro_pressure':1013.1}}),0.)
     def test_legitimate_small_offset_is_retained(self):
         self.assertEqual(reference_altimeter_offset({'telemetry':{'indicated_altitude':2998.,'pressure_alt':3000.,'baro_pressure':1013.1}}),-2.)
+    def test_moderate_teleport_lag_at_standard_pressure_returns_zero(self):
+        self.assertEqual(reference_altimeter_offset({'telemetry':{'indicated_altitude':1945.67,'pressure_alt':1999.99,'baro_pressure':1013.25}}), 0.0)
     def test_native_instrument_restore_never_writes_indicated_altitude(self):
         source=(ROOT/'native'/'src'/'p3d_bridge_v15_full_causal_state.cpp').read_text()
         definitions=[line for line in source.splitlines() if 'TrackedAddToDataDefinition' in line and 'DEFINITION_INITIAL_INSTRUMENTS_V1506,' in line]

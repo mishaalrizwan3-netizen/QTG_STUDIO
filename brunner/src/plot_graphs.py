@@ -778,6 +778,24 @@ def _manual_report(csv_path, out_path):
 
 
 
+def _draw_climb_airspeed_target(ax,target_ias,tolerance=3.):
+    lower,upper=target_ias-tolerance,target_ias+tolerance
+    ax.axhspan(lower,upper,color='lightskyblue',alpha=.22,
+        label=f'IAS tolerance +/-{tolerance:g} kt ({lower:g}-{upper:g} kt)')
+    ax.axhline(lower,color='steelblue',linestyle='--',linewidth=1.)
+    ax.axhline(upper,color='steelblue',linestyle='--',linewidth=1.)
+    ax.axhline(target_ias,color='gray',linestyle=':',linewidth=1.3,label=f'Target IAS ({target_ias:g} kt)')
+
+
+def _format_climb_airspeed_axis(ax):
+    from matplotlib.ticker import MaxNLocator, StrMethodFormatter
+    import math
+    low,high=ax.get_ylim()
+    ax.set_ylim(math.floor(low),max(math.floor(low)+1,math.ceil(high)))
+    ax.yaxis.set_major_locator(MaxNLocator(nbins=6,integer=True))
+    ax.yaxis.set_major_formatter(StrMethodFormatter('{x:.0f}'))
+
+
 def _pid_report(csv_path, out_path, validation_df=None, evaluation_result="NOT EVALUATED", target_ias=80, selected_graphs=None, mode="pid"):
     """Same six-page portrait graph groups as the supplied Manual report."""
     df=_read_csv(csv_path);t=_series(df,"Time (s)")
@@ -831,7 +849,7 @@ def _pid_report(csv_path, out_path, validation_df=None, evaluation_result="NOT E
                 if not np.isfinite(np.asarray(values,dtype=float)).any():
                     ax.text(.5,.5,'Measurement not available',transform=ax.transAxes,ha='center',va='center',color='gray')
                 if key=='Indicated Airspeed (kts)':
-                    ax.axhline(target_ias,color='gray',linestyle=':',linewidth=1.3,label=f'Target IAS ({target_ias:g} kt)')
+                    _draw_climb_airspeed_target(ax,target_ias)
                 if validation_df is not None and key in validation_df and (mode=='auto' or key in ('Indicated Airspeed (kts)','Rate of Climb/Descent (fpm)')):
                     rt=_series(validation_df,'Time (s)');reference=_series(validation_df,key)
                     tolerance=3. if key=='Indicated Airspeed (kts)' else np.maximum(abs(reference)*.05,100.) if key=='Rate of Climb/Descent (fpm)' else None
@@ -842,6 +860,7 @@ def _pid_report(csv_path, out_path, validation_df=None, evaluation_result="NOT E
                         ax.plot(rt,reference-tolerance,color='gray',linestyle='--',linewidth=.8)
                         ax.plot(rt,reference+tolerance,color='gray',linestyle='--',linewidth=.8)
                 _style_axis(ax,label)
+                if key=='Indicated Airspeed (kts)':_format_climb_airspeed_axis(ax)
                 ax.set_xlim(0,duration)
                 ax.set_xticks(np.arange(0,duration+1,5 if duration<=120 else 10))
                 ax.legend(loc='best',fontsize=8,framealpha=.95)
@@ -1014,7 +1033,31 @@ def _auto_report(auto_path, manual_path, out_path):
 
 
 
+
+def _is_engine_test(csv_path, kwargs):
+    test_ref = str(kwargs.get('test_reference', '')).lower()
+    path_str = str(csv_path).lower()
+    return ('1.f.(1)' in test_ref or '1.f.(2)' in test_ref or '1.f.1' in test_ref or '1.f.2' in test_ref or
+            'engine' in test_ref or 'engine' in path_str or '1_f_1' in path_str or '1_f_2' in path_str)
+
+def _get_engine_plot_module():
+    import importlib.util
+    engine_plot_path = Path(__file__).resolve().parent.parent / "QTG_Studio_Antigravity_Single_Main" / "plot_graphs.py"
+    if not engine_plot_path.exists():
+        engine_plot_path = Path(r"C:\Users\Qasim 007\Desktop\QTG_Studio\QTG_Studio_Antigravity_Single_Main\plot_graphs.py")
+    spec = importlib.util.spec_from_file_location("engine_plot_graphs", str(engine_plot_path))
+    engine_module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(engine_module)
+    return engine_module
+
 def plot_aligned_comparison(csv_path, manual_csv_path=None, output_pdf_path=None, **kwargs):
+    if _is_engine_test(csv_path, kwargs):
+        try:
+            engine_mod = _get_engine_plot_module()
+            return engine_mod.plot_aligned_comparison(csv_path, manual_csv_path=manual_csv_path, output_pdf_path=output_pdf_path, **kwargs)
+        except Exception as e:
+            print(f"[plot_graphs Engine delegation note] {e}", flush=True)
+
     if kwargs.get('control_method')=='pid':
         from qtg_climb_pid import report
         return report(csv_path,kwargs.get('validation_csv_path'),kwargs.get('run_fault'),selected_graphs=kwargs.get('selected_graphs'),target_ias=kwargs.get('pid_target_ias',80))

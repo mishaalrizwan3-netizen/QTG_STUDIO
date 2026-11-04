@@ -2008,6 +2008,14 @@ class App(tk.Tk):
             font=(FONT, 11, "bold")
         )
         self.btn_subtab_auto.pack(side="left")
+        if spec.reference=="1.c.(1)":
+            self.btn_subtab_auto_replay=RoundedButton(
+                subtab_bar,"Automatic Replay",
+                command=lambda:self._launch_common_test("auto",spec,control_method="replay"),
+                width=190,height=44,radius=5,bg="#FFFFFF",fg=COL["text"],
+                hover_bg="#EFF6FF",hover_fg=COL["blue"],border="#CBD5E1",
+                parent_bg=COL["bg"],font=(FONT,11,"bold"))
+            self.btn_subtab_auto_replay.pack(side="left",padx=(10,0))
 
         # Content Card for the active subtab
         self.subtab_card = RoundedCard(self.workspace, bg="#FFFFFF", border="#CBD5E1", radius=5, parent_bg=COL["bg"])
@@ -2089,7 +2097,7 @@ class App(tk.Tk):
         if not hasattr(self,'_pid_duration_vars'):self._pid_duration_vars={}
         method=getattr(self,'_automatic_methods',{}).get(spec.reference)
         is_pid=spec.reference=='1.c.(1)' and (method is None or method.get()=='PID Automatic')
-        self._common_duration_var=self._pid_duration_vars.setdefault(spec.reference,tk.StringVar(value='10')) if is_pid else self._common_duration_vars[spec.reference]
+        self._common_duration_var=self._pid_duration_vars.setdefault(spec.reference,tk.StringVar(value='75')) if is_pid else self._common_duration_vars[spec.reference]
         self.common_duration_spinbox.configure(textvariable=self._common_duration_var)
 
     def _refresh_common_references(self):
@@ -2153,11 +2161,12 @@ class App(tk.Tk):
         self.common_record_button.configure(state="normal" if state.get("can_record") else "disabled")
         self.common_output_var.set("Data: "+state.get("data_directory",str(RESULTS_ROOT)))
 
-    def _launch_common_test(self,mode,spec,force_initialize=False):
+    def _launch_common_test(self,mode,spec,force_initialize=False,control_method=None):
         try:
             from qtg_common_engine import launch,validate_duration,validate_reference
             duration=validate_duration(self._common_duration_var.get())
-            method="pid" if mode=="auto" and spec.reference=="1.c.(1)" and self._automatic_methods[spec.reference].get()=="PID Automatic" else "replay"
+            if control_method not in (None,"pid","replay"):raise ValueError("Unknown automatic control method")
+            method=control_method or ("pid" if mode=="auto" and spec.reference=="1.c.(1)" and self._automatic_methods[spec.reference].get()=="PID Automatic" else "replay")
             if mode=="manual":duration=validate_duration(self._common_duration_vars[spec.reference].get())
             if not self._apply_test_settings(spec): return
             fields,_=self._test_settings[spec.reference]

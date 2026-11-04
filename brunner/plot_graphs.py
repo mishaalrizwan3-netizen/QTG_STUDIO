@@ -935,7 +935,31 @@ def _auto_report(auto_path, manual_path, out_path):
 
 
 
+
+def _is_engine_test(csv_path, kwargs):
+    test_ref = str(kwargs.get('test_reference', '')).lower()
+    path_str = str(csv_path).lower()
+    return ('1.f.(1)' in test_ref or '1.f.(2)' in test_ref or '1.f.1' in test_ref or '1.f.2' in test_ref or
+            'engine' in test_ref or 'engine' in path_str or '1_f_1' in path_str or '1_f_2' in path_str)
+
+def _get_engine_plot_module():
+    import importlib.util
+    engine_plot_path = Path(__file__).resolve().parent.parent / "QTG_Studio_Antigravity_Single_Main" / "plot_graphs.py"
+    if not engine_plot_path.exists():
+        engine_plot_path = Path(r"C:\Users\Qasim 007\Desktop\QTG_Studio\QTG_Studio_Antigravity_Single_Main\plot_graphs.py")
+    spec = importlib.util.spec_from_file_location("engine_plot_graphs", str(engine_plot_path))
+    engine_module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(engine_module)
+    return engine_module
+
 def plot_aligned_comparison(csv_path, manual_csv_path=None, output_pdf_path=None, **kwargs):
+    if _is_engine_test(csv_path, kwargs):
+        try:
+            engine_mod = _get_engine_plot_module()
+            return engine_mod.plot_aligned_comparison(csv_path, manual_csv_path=manual_csv_path, output_pdf_path=output_pdf_path, **kwargs)
+        except Exception as e:
+            print(f"[plot_graphs Engine delegation note] {e}", flush=True)
+
 
     csv_path = Path(csv_path)
 

@@ -155,7 +155,9 @@ def reference_altimeter_offset(snapshot):
         return None
     offset=float(indicated)-float(physical)
     baro=float(state.get("baro_pressure",float("nan")))
-    if abs(offset)>100 and math.isfinite(baro) and abs(baro-1013.25)<2:
+    if math.isfinite(baro) and abs(baro-1013.25)<3.0 and abs(offset)>10.0:
+        return 0.0
+    if abs(offset)>50.0:
         return 0.0
     return offset
 

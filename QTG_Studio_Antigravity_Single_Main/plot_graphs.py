@@ -303,12 +303,11 @@ def _parse_stamp(path):
 def _find_manual_for_auto(auto_path):
     folder = Path(auto_path).parent
     candidates = sorted(
-        p for p in folder.glob("Super_Mushak_manual_takeoff_data_*.csv")
-        if re.fullmatch(
-            r"Super_Mushak_manual_takeoff_data_\d{4}-\d{2}-\d{2}_\d{2}-\d{2}-\d{2}(?:\(\d+\))?\.csv",
-            p.name,
-        )
+        p for p in folder.glob("*manual*.csv")
+        if not p.name.endswith("_engine_channels.csv") and not p.name.endswith("_legacy_plot.csv")
     )
+    if not candidates:
+        candidates = sorted(p for p in folder.glob("Super_Mushak_manual_takeoff_data_*.csv"))
     if not candidates:
         return None
     return candidates[-1]
@@ -345,7 +344,13 @@ def _resolve_event_time(path, df, kind="acceleration", meta=None):
 def _initial_page(pdf, mode, source_path, sim_df, ref_df=None, metadata=None):
     date_text, time_text = _parse_stamp(source_path)
     is_auto = mode == "auto"
-    kind = (metadata.get("kind", "acceleration") if metadata else "acceleration").capitalize()
+    path_text = str(source_path).lower()
+    if metadata and metadata.get("kind"):
+        kind = str(metadata["kind"]).capitalize()
+    elif "deceleration" in path_text or "1_f_2" in path_text or (metadata and "1.f.(2)" in str(metadata.get("test_reference"))):
+        kind = "Deceleration"
+    else:
+        kind = "Acceleration"
     status = (metadata.get("status", "complete") if metadata else "complete") or "complete"
 
     fig = plt.figure(figsize=(8.27, 11.69))
@@ -519,7 +524,13 @@ def _render_report(sim_path, ref_path=None, out_path="report.pdf", titt_results=
     sim_legacy = _read_csv(sim_path)
     ref_legacy = _read_csv(ref_path) if is_auto else None
 
-    kind = (metadata.get("kind", "acceleration") if metadata else "acceleration").capitalize()
+    path_text = str(sim_path).lower()
+    if metadata and metadata.get("kind"):
+        kind = str(metadata["kind"]).capitalize()
+    elif "deceleration" in path_text or "1_f_2" in path_text or (metadata and "1.f.(2)" in str(metadata.get("test_reference"))):
+        kind = "Deceleration"
+    else:
+        kind = "Acceleration"
     status = (metadata.get("status", "complete") if metadata else "complete") or "complete"
     # This engine-only report intentionally does not grade Pitch/Roll/Yaw
     # positional tracking. Physical control diagnostics remain in raw CSVs;
@@ -681,12 +692,23 @@ def _render_report(sim_path, ref_path=None, out_path="report.pdf", titt_results=
             plt.close(fig)
 
         # Page 5: Ti/Tt Response Time Assessment (when available)
+        if titt_results is None:
+            try:
+                import sys
+                script_dir = str(Path(__file__).resolve().parent)
+                if script_dir not in sys.path:
+                    sys.path.insert(0, script_dir)
+                from SMK_Engine_TiTt_V2_1_3_Addon import evaluate_engine_run
+                titt_results = evaluate_engine_run(sim_path, ref_path if is_auto else None, mode=kind.lower())
+            except Exception as e:
+                print(f"[TiTt auto-eval note] {e}", flush=True)
+
         if titt_results and titt_results.get('raw_measurements') and titt_results.get('raw_traces'):
             try:
                 from SMK_Engine_TiTt_V2_1_3_Addon import plot_titt_page
                 fig = plt.figure(figsize=(8.27, 11.69))
-                mode = titt_results.get('mode', 'acceleration')
-                param_name = titt_results.get('critical_parameter', 'Engine 1 RPM')
+                mode = titt_results.get('mode', kind.lower())
+                param_name = titt_results.get('critical_parameter', 'manifold_inhg')
                 plot_titt_page(fig, titt_results['raw_measurements'], titt_results['raw_traces'],
                                mode, param_name, comparison=titt_results.get('comparisons'))
                 pdf.savefig(fig)
@@ -696,15 +718,26 @@ def _render_report(sim_path, ref_path=None, out_path="report.pdf", titt_results=
 
 def plot_aligned_comparison(csv_path, manual_csv_path=None, titt_results=None, metadata=None, **kwargs):
     csv_path = Path(csv_path)
-    out_path = csv_path.with_name(csv_path.stem + "_graphs.pdf")
+    out_path = Path(kwargs.get("output_pdf_path")) if kwargs.get("output_pdf_path") else csv_path.with_name(csv_path.stem + "_graphs.pdf")
 
-    if "manual_takeoff_data" in csv_path.name.lower() and manual_csv_path is None:
+    if metadata is None:
+        metadata = {}
+    if kwargs.get("test_reference"):
+        metadata.setdefault("test_reference", kwargs["test_reference"])
+    if "1.f.(2)" in str(kwargs.get("test_reference")) or "deceleration" in csv_path.name.lower():
+        metadata.setdefault("kind", "deceleration")
+    else:
+        metadata.setdefault("kind", "acceleration")
+
+    if "manual" in csv_path.name.lower() and manual_csv_path is None:
         _render_report(csv_path, ref_path=None, out_path=out_path, titt_results=titt_results, metadata=metadata)
         return str(out_path)
 
     manual_path = Path(manual_csv_path) if manual_csv_path else _find_manual_for_auto(csv_path)
     if manual_path is None or not manual_path.exists():
-        raise FileNotFoundError("No Manual reference CSV found for Automatic report.")
+        print("[Engine Report] No manual reference found, rendering single-run report.")
+        _render_report(csv_path, ref_path=None, out_path=out_path, titt_results=titt_results, metadata=metadata)
+        return str(out_path)
 
     _render_report(csv_path, ref_path=manual_path, out_path=out_path, titt_results=titt_results, metadata=metadata)
     return str(out_path)

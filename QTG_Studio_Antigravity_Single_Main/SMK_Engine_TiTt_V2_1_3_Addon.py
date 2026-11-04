@@ -31,7 +31,8 @@ ALIASES = {
                  'throttle lever position', 'throttle position', 'throttle_input'],
     'map': ['map_inhg', 'map', 'manifold_pressure_inhg', 'manifold pressure', 'manifold_inhg',
             'general eng manifold pressure:1', 'eng manifold pressure', 'manifold pressure (inhg)',
-            'engine_manifold_pressure_psi_1'],
+            'engine_manifold_pressure_psi_1', 'engine manifold pressure (psi)', 'engine manifold pressure',
+            'manifold pressure (psi)'],
     'power': ['engine_power_hp', 'shaft_power_hp', 'brake_horsepower', 'power_hp',
               'horsepower', 'engine power', 'power', 'general eng power available:1'],
     'rpm': ['engine_rpm', 'eng_rpm', 'rpm', 'engine 1 rpm', 'engine_1_rpm', 'general eng rpm:1',
@@ -144,6 +145,8 @@ def parse_trace(path: Path, *, time_col=None, throttle_col=None, parameter_col=N
             t = [r[0] * time_scale for r in raw]
             h = [r[1] for r in raw]
             p = [r[2] for r in raw]
+            if '(psi)' in str(pc).lower() or str(pc).lower().endswith('_psi') or str(pc).lower().endswith('_psi_1'):
+                p = [x * 2.03602 for x in p]
             if any(b <= a for a, b in zip(t, t[1:])):
                 raise ValueError(f'{cand.name}: timestamps must be strictly increasing')
             if throttle_scale is None:
