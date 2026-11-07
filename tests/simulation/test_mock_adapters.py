@@ -54,11 +54,28 @@ class MockAdapterTests(unittest.TestCase):
         brunner = MockBrunner()
         self.assertTrue(brunner.connect())
         brunner.configure_replay_mode()
+        self.assertEqual(brunner.overrides, brunner.ALL_AXES)
+        self.assertTrue(brunner._autopilot_enabled)
+        self.assertTrue(brunner._virtual_force_enabled)
+        self.assertEqual(brunner._settings[(brunner.AXIS_PITCH, 0x50)], 1800)
+        self.assertEqual(brunner._settings[(brunner.AXIS_PITCH, 0x60)], 300)
         brunner.move_actuators(0.25, -0.1, 0.05)
         self.assertAlmostEqual(brunner.read_axis(brunner.AXIS_PITCH)[0], 0.25)
         self.assertAlmostEqual(brunner.read_axis(brunner.AXIS_ROLL)[0], -0.1)
+        brunner.prepare_manual_mode()
+        self.assertEqual(brunner.overrides, 0)
+        self.assertFalse(brunner._autopilot_enabled)
+        self.assertFalse(brunner._virtual_force_enabled)
         brunner.release_controls()
         self.assertAlmostEqual(brunner.read_axis(brunner.AXIS_PITCH)[0], 0.0)
+
+    def test_brunner_replay_mode_respects_axis_mask(self):
+        brunner = MockBrunner()
+        brunner.connect()
+        brunner.configure_replay_mode(brunner.AXIS_PITCH)
+        self.assertEqual(brunner.overrides, brunner.AXIS_PITCH)
+        self.assertIn((brunner.AXIS_PITCH, 0x50), brunner._settings)
+        self.assertNotIn((brunner.AXIS_ROLL, 0x50), brunner._settings)
 
 
 if __name__ == "__main__":
