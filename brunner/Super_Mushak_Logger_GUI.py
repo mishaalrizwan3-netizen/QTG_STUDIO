@@ -1147,6 +1147,15 @@ class SuperMushakLoggerApp(QMainWindow):
             if not all(math.isfinite(value) for value in initial_position):
                 raise RuntimeError('Ground position telemetry is invalid before RPM pre-roll.')
         if not matches(engine,prop):
+            if is_ground_deceleration:
+                # Never run a high-throttle ground deceleration setup to chase RPM.
+                # A post-run position check is too late to prevent aircraft creep.
+                raise RuntimeError(
+                    f'Ground deceleration requires the recorded stabilized RPM before replay: '
+                    f'paused engine={engine:.1f}, prop={prop:.1f}, target={target:.1f}. '
+                    'P3D was kept paused. Stabilize the engine and record a fresh Manual reference; '
+                    'automatic preparation will not unpause the aircraft at high throttle.'
+                )
             deadline = time.monotonic()+20.0
             throttle = float(snapshot['throttle'])
             print(f'[Auto Prep] Natural engine pre-roll to {target:.1f} RPM; timer remains zero.', flush=True)
@@ -1180,25 +1189,6 @@ class SuperMushakLoggerApp(QMainWindow):
                     raise RuntimeError('P3D did not confirm pause after engine pre-roll.')
                 if not sim.set_initial_throttle(float(snapshot['throttle'])):
                     raise RuntimeError('P3D rejected recorded throttle restoration after pre-roll.')
-            post_preroll_telemetry = self._refresh_paused_telemetry()
-            if is_ground_deceleration and initial_position is not None:
-                try:
-                    final_position = (
-                        float(post_preroll_telemetry['plane_latitude']),
-                        float(post_preroll_telemetry['plane_longitude'])
-                    )
-                    lat1, lon1 = map(math.radians, initial_position)
-                    lat2, lon2 = map(math.radians, final_position)
-                    dlat, dlon = lat2-lat1, lon2-lon1
-                    haversine = math.sin(dlat/2.0)**2 + math.cos(lat1)*math.cos(lat2)*math.sin(dlon/2.0)**2
-                    drift_m = 6371000.0 * 2.0 * math.asin(min(1.0, math.sqrt(haversine)))
-                except (KeyError, TypeError, ValueError, OverflowError):
-                    raise RuntimeError('Ground position telemetry is unavailable after RPM pre-roll.')
-                if not math.isfinite(drift_m) or drift_m > 1.0:
-                    raise RuntimeError(
-                        f'Aircraft moved {drift_m:.2f} m during engine RPM pre-roll. '
-                        'Ground deceleration replay is blocked; check parking-brake and ground-friction behaviour.'
-                    )
             self._restore_reference_state()
             self._prepare_reference_power()
             engine, prop = readings(self._refresh_paused_telemetry())
