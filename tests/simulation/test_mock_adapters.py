@@ -59,6 +59,16 @@ class MockAdapterTests(unittest.TestCase):
         after = sim.get_telemetry()["engine_rpm"]
         self.assertEqual(before, after)
 
+    def test_mock_p3d_rejects_invalid_initial_controls_like_real_client(self):
+        sim = MockP3D()
+        with self.assertRaises(ValueError):
+            sim.set_initial_throttle(101)
+        with self.assertRaises(ValueError):
+            sim.set_initial_flaps(1.5)
+        self.assertFalse(sim.set_replay_throttle(101))
+        self.assertFalse(sim.set_throttle(50))
+        self.assertFalse(sim.set_flaps_handle_index(1))
+
     def test_engine_rpm_mock_targets_match_engine_test_power_points(self):
         sim = MockP3D()
         sim.set_initial_throttle(5)
