@@ -757,10 +757,16 @@ class SuperMushakLoggerApp(QMainWindow):
                               first_row.get("Indicated Altitude (ft)") or 
                               first_row.get("Altitude_Manual") or 3000.0)
 
-                m_spd = float(self.ref_manual_snapshot.get("airspeed") or 
-                              self.ref_manual_snapshot.get("ias_kts") or 
-                              first_row.get("Indicated Airspeed (kts)") or 
-                              first_row.get("Airspeed_Manual") or 80.0)
+                # Zero IAS is a valid recorded value for the ground deceleration test.
+                speed_candidates = (
+                    self.ref_manual_snapshot.get("airspeed"),
+                    self.ref_manual_snapshot.get("ias_kts"),
+                    first_row.get("Indicated Airspeed (kts)"),
+                    first_row.get("Airspeed_Manual"),
+                )
+                speed_value = next((value for value in speed_candidates
+                                    if value is not None and str(value).strip() != ""), 80.0)
+                m_spd = float(speed_value)
 
                 m_pitch = float(self.ref_manual_snapshot.get("pitch_ang") or 
                                 self.ref_manual_snapshot.get("pitch_deg") or 
@@ -846,10 +852,21 @@ class SuperMushakLoggerApp(QMainWindow):
                 time.sleep(0.1)
                 # Establish airspeed/body motion using the earlier, better-performing
                 # airborne initialization before restoring recorded world motion.
-                self.p3d.set_position_airborne(
-                    alt_ft=m_alt, speed_kts=m_spd, pitch_deg=m_pitch,
-                    bank_deg=-m_bank, hdg_deg=m_hdg, lat=m_lat, lon=m_lon
-                )
+                is_ground_test = getattr(self, '_session_context', {}).get('test_reference') == '1.f.(2)'
+                if is_ground_test:
+                    if abs(m_spd) > 2.0:
+                        raise RuntimeError("Ground deceleration reference must start at 0 kt IAS.")
+                    if not self.p3d.queue_position_airborne(
+                        alt_ft=m_alt, speed_kts=0.0, pitch_deg=m_pitch,
+                        bank_deg=-m_bank, hdg_deg=m_hdg, lat=m_lat, lon=m_lon,
+                        on_ground=True
+                    ):
+                        raise RuntimeError("Prepar3D rejected the on-ground deceleration position.")
+                else:
+                    self.p3d.set_position_airborne(
+                        alt_ft=m_alt, speed_kts=m_spd, pitch_deg=m_pitch,
+                        bank_deg=-m_bank, hdg_deg=m_hdg, lat=m_lat, lon=m_lon
+                    )
                 time.sleep(0.3)
                 self.p3d.pause_sim()
                 self._wait_for_initial_altitude(m_alt)
@@ -878,7 +895,10 @@ class SuperMushakLoggerApp(QMainWindow):
                 cmd_y = max(-1.0, min(1.0, y0 + self.replay_axis_offsets[2]))
                 self.brunner.move_actuators(cmd_p, cmd_r, cmd_y)
                 tele = self._refresh_paused_telemetry()
-                validate_initial_airspeed(tele, m_spd)
+                validate_initial_airspeed(
+                    tele, m_spd,
+                    on_ground=getattr(self, '_session_context', {}).get('test_reference') == '1.f.(2)'
+                )
                 validate_reference_power(tele, self.ref_manual_snapshot)
                 target_rpm = self.ref_manual_snapshot.get("rpm")
                 if target_rpm is not None:
@@ -1565,7 +1585,10 @@ class SuperMushakLoggerApp(QMainWindow):
         try:
             ready = self._refresh_paused_telemetry()
             if self.p3d:
-                validate_initial_airspeed(ready, self.ref_manual_snapshot["airspeed"])
+                validate_initial_airspeed(
+                    ready, self.ref_manual_snapshot["airspeed"],
+                    on_ground=getattr(self, '_session_context', {}).get('test_reference') == '1.f.(2)'
+                )
                 validate_reference_power(ready, self.ref_manual_snapshot)
         except Exception as exc:
             self.is_recording = False
