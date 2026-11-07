@@ -2163,7 +2163,24 @@ class App(tk.Tk):
                 self._common_view_vars[key]=variable
                 tk.Label(card,textvariable=variable,bg="#F8FAFC",fg=COL["text"],font=(FONT,9),anchor="w",justify="left",wraplength=430).pack(fill="x",pady=2)
         self.common_progress=ttk.Progressbar(box,maximum=75,mode="determinate")
-        self.common_progress.pack(fill="x",pady=(0,12))
+        self.common_progress.pack(fill="x",pady=(0,8))
+        self.mock_throttle_row=tk.LabelFrame(
+            box,text="Simulation throttle — home-PC testing only",
+            bg="#FFF7ED",fg="#9A3412",padx=10,pady=8
+        )
+        self.mock_throttle_status_var=tk.StringVar(
+            value="This control unlocks after the 5-second full-power baseline."
+        )
+        tk.Label(
+            self.mock_throttle_row,textvariable=self.mock_throttle_status_var,
+            bg="#FFF7ED",fg="#7C2D12",font=(FONT,9),anchor="w",justify="left"
+        ).pack(side="left",fill="x",expand=True)
+        self.mock_throttle_idle_button=ttk.Button(
+            self.mock_throttle_row,text="Set simulated throttle to IDLE (0%)",
+            command=lambda:self._common_command("mock_throttle",percent=0.0),
+            state="disabled"
+        )
+        self.mock_throttle_idle_button.pack(side="right",padx=(10,0))
         if not hasattr(self,"_common_reference_vars"): self._common_reference_vars={}
         self._common_reference_var=self._common_reference_vars.setdefault(spec.reference,tk.StringVar())
         reference=tk.LabelFrame(box,text="Manual reference for Recorded Replay",bg="#FFFFFF",fg=COL["blue"],padx=10,pady=10)
@@ -2267,6 +2284,24 @@ class App(tk.Tk):
             self.common_progress.stop()
             self.common_progress.configure(mode="determinate",maximum=max(1,state.get("duration_s",75)),value=state.get("elapsed",0))
         self.common_record_button.configure(state="normal" if state.get("can_record") else "disabled")
+        show_mock_throttle=bool(
+            state.get("simulation_mode") and state.get("test_reference")=="1.f.(2)"
+        )
+        if show_mock_throttle:
+            if not self.mock_throttle_row.winfo_manager():
+                self.mock_throttle_row.pack(fill="x",pady=(0,10),before=self.common_reference_combo.master)
+            available=bool(state.get("mock_throttle_prompt_ready") and state.get("recording") and not state.get("mock_throttle_applied"))
+            applied=bool(state.get("mock_throttle_applied"))
+            self.mock_throttle_idle_button.configure(state="normal" if available else "disabled")
+            if applied:
+                self.mock_throttle_status_var.set("Throttle is at IDLE (0%). The simulated engine RPM is decaying.")
+            elif available:
+                self.mock_throttle_status_var.set("Baseline complete. Click once to move simulated throttle to IDLE (0%).")
+            else:
+                self.mock_throttle_status_var.set("Waiting for the 5-second full-power baseline. This control is simulation-only.")
+        else:
+            if self.mock_throttle_row.winfo_manager():
+                self.mock_throttle_row.pack_forget()
         self.common_output_var.set("Data: "+state.get("data_directory",str(RESULTS_ROOT)))
 
     def _launch_common_test(self,mode,spec,force_initialize=False,control_method=None):
