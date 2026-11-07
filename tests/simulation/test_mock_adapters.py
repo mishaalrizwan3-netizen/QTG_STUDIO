@@ -2,7 +2,7 @@
 import unittest
 
 from simulator_mock import MockP3D, MockBrunner
-from brunner.src.replay_support import validate_initial_airspeed
+from brunner.src.replay_support import validate_initial_airspeed, ThrottleReplay
 
 
 class MockAdapterTests(unittest.TestCase):
@@ -181,6 +181,20 @@ class MockAdapterTests(unittest.TestCase):
         self.assertIn((brunner.AXIS_PITCH, 0x50), brunner._settings)
         self.assertIn((brunner.AXIS_ROLL, 0x50), brunner._settings)
         self.assertNotIn((brunner.AXIS_RUDDER, 0x50), brunner._settings)
+
+
+    def test_replay_throttle_interpolates_and_holds_end_value(self):
+        replay = ThrottleReplay([0.0, 1.0, 2.0], [5.0, 50.0, 100.0])
+        self.assertEqual(replay.command(0.0), 5.0)
+        self.assertAlmostEqual(replay.command(0.5), 27.5)
+        self.assertAlmostEqual(replay.command(1.5), 75.0)
+        self.assertAlmostEqual(replay.command(2.5), 100.0)
+
+    def test_replay_throttle_rejects_non_monotonic_clock(self):
+        replay = ThrottleReplay([0.0, 1.0], [5.0, 100.0])
+        replay.command(0.5)
+        with self.assertRaisesRegex(ValueError, "monotonic"):
+            replay.command(0.4)
 
 
 if __name__ == "__main__":
