@@ -1387,6 +1387,7 @@ class SimConnectClient:
                 "ambient_wind_dir": float(raw.ambientWindDirection),
                 "ambient_wind_spd": float(raw.ambientWindVelocity),
                 "ground_speed": float(raw.groundSpeed),
+                "parking_brake_position": float(raw.brakeParkingPosition),
                 "mach_number": float(raw.machNumber),
                 "pressure_alt": float(raw.pressureAlt),
                 "radar_alt": float(raw.radarAlt),
