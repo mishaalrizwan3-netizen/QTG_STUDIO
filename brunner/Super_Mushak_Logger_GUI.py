@@ -723,6 +723,24 @@ class SuperMushakLoggerApp(QMainWindow):
                 else:
                     self.ref_manual_snapshot = {}
 
+                # Enforce the simulation/live boundary again at replay startup.
+                # The dropdown filters files, but a stale or manually selected path
+                # must not bypass the qualification-data safeguard.
+                simulation_mode = bool(getattr(self, "_session_context", {}).get("simulation_mode"))
+                reference_is_simulation = (
+                    "simulation_only" in Path(ref_path).name.lower()
+                    or (os.path.exists(json_ref) and bool(data.get("simulation_only")))
+                )
+                if simulation_mode and not reference_is_simulation:
+                    raise RuntimeError(
+                        "Simulation mode requires a SIMULATION_ONLY manual reference. "
+                        "Live and simulated recordings cannot be mixed."
+                    )
+                if not simulation_mode and reference_is_simulation:
+                    raise RuntimeError(
+                        "A SIMULATION_ONLY reference cannot be replayed in live qualification mode."
+                    )
+
                 if not self.ref_manual_snapshot and first_row:
                     self.ref_manual_snapshot = {
                         "altitude": float(first_row.get("Indicated Altitude (ft)") or first_row.get("Pressure Alt (ft)") or 3000.0),
