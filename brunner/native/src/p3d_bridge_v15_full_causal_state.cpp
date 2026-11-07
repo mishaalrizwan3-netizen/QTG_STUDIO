@@ -643,11 +643,11 @@ extern "C" {
             TrackedAddToDataDefinition(hSimConnect, DEFINITION_TELEMETRY, "FUEL TANK RIGHT MAIN LEVEL", "percent over 100", SIMCONNECT_DATATYPE_FLOAT64, 0.0f, SIMCONNECT_UNUSED);
             TrackedAddToDataDefinition(hSimConnect, DEFINITION_TELEMETRY, "FUEL TANK CENTER LEVEL", "percent over 100", SIMCONNECT_DATATYPE_FLOAT64, 0.0f, SIMCONNECT_UNUSED);
             TrackedAddToDataDefinition(hSimConnect, DEFINITION_TELEMETRY, "FUEL TANK SELECTOR:1", "enum", SIMCONNECT_DATATYPE_FLOAT64, 0.0f, SIMCONNECT_UNUSED);
-            TrackedAddToDataDefinition(hSimConnect, DEFINITION_TELEMETRY, "SIM ON GROUND", "bool", SIMCONNECT_DATATYPE_FLOAT64, 0.0f, SIMCONNECT_UNUSED); // Reserved ABI slot: no controller query.
-            TrackedAddToDataDefinition(hSimConnect, DEFINITION_TELEMETRY, "SIM ON GROUND", "bool", SIMCONNECT_DATATYPE_FLOAT64, 0.0f, SIMCONNECT_UNUSED); // Reserved ABI slot: no controller query.
-            TrackedAddToDataDefinition(hSimConnect, DEFINITION_TELEMETRY, "SIM ON GROUND", "bool", SIMCONNECT_DATATYPE_FLOAT64, 0.0f, SIMCONNECT_UNUSED); // Reserved ABI slot: no controller query.
-            TrackedAddToDataDefinition(hSimConnect, DEFINITION_TELEMETRY, "SIM ON GROUND", "bool", SIMCONNECT_DATATYPE_FLOAT64, 0.0f, SIMCONNECT_UNUSED); // Reserved ABI slot: no controller query.
-            TrackedAddToDataDefinition(hSimConnect, DEFINITION_TELEMETRY, "SIM ON GROUND", "bool", SIMCONNECT_DATATYPE_FLOAT64, 0.0f, SIMCONNECT_UNUSED); // Reserved ABI slot: no controller query.
+            TrackedAddToDataDefinition(hSimConnect, DEFINITION_TELEMETRY, "AUTOPILOT MASTER", "bool", SIMCONNECT_DATATYPE_FLOAT64, 0.0f, SIMCONNECT_UNUSED);
+            TrackedAddToDataDefinition(hSimConnect, DEFINITION_TELEMETRY, "AUTO COORDINATION", "bool", SIMCONNECT_DATATYPE_FLOAT64, 0.0f, SIMCONNECT_UNUSED);
+            TrackedAddToDataDefinition(hSimConnect, DEFINITION_TELEMETRY, "SPOILERS HANDLE POSITION", "position", SIMCONNECT_DATATYPE_FLOAT64, 0.0f, SIMCONNECT_UNUSED);
+            TrackedAddToDataDefinition(hSimConnect, DEFINITION_TELEMETRY, "GEAR HANDLE POSITION", "bool", SIMCONNECT_DATATYPE_FLOAT64, 0.0f, SIMCONNECT_UNUSED);
+            TrackedAddToDataDefinition(hSimConnect, DEFINITION_TELEMETRY, "BRAKE PARKING POSITION", "bool", SIMCONNECT_DATATYPE_FLOAT64, 0.0f, SIMCONNECT_UNUSED);
 
             TrackedAddToDataDefinition(hSimConnect, DEFINITION_TELEMETRY, "PROP BETA:1", "radians", SIMCONNECT_DATATYPE_FLOAT64, 0.0f, SIMCONNECT_UNUSED);
             TrackedAddToDataDefinition(hSimConnect, DEFINITION_TELEMETRY, "ENG TORQUE:1", "foot pounds", SIMCONNECT_DATATYPE_FLOAT64, 0.0f, SIMCONNECT_UNUSED);
