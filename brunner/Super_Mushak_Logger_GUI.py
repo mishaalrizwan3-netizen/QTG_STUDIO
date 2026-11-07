@@ -1403,10 +1403,24 @@ class SuperMushakLoggerApp(QMainWindow):
         print("[Auto Prep] Local airflow and altimeter recovered; paused before final Manual motion restore.", flush=True)
 
     def _refresh_restored_airdata(self):
-        """Let real air data catch up with restored motion, without instrument-altitude writes."""
+        """Refresh restored air data; keep the stationary ground test paused."""
         sim=self.p3d
         if sim is None or not sim.is_connected():
             raise RuntimeError("Prepar3D disconnected while refreshing restored air data.")
+
+        # Ground deceleration starts at zero IAS. Do not unpause merely to refresh
+        # airborne air-data values: even a short live interval could let the aircraft
+        # creep with high power applied. Validate the ground state from paused data.
+        if getattr(self, '_session_context', {}).get('test_reference') == '1.f.(2)':
+            if not sim.wait_for_paused(3.0):
+                raise RuntimeError("Ground deceleration air-data check requires paused P3D.")
+            fresh=self._refresh_paused_telemetry()
+            validate_initial_airspeed(
+                fresh, self.ref_manual_snapshot["airspeed"], on_ground=True
+            )
+            print("[Auto Prep] Ground deceleration zero-IAS state verified while P3D remained paused.", flush=True)
+            return
+
         expected=reference_altimeter_offset(self.ref_manual_snapshot)
         try:
             sim.unpause_sim()
