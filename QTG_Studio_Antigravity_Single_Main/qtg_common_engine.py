@@ -333,7 +333,7 @@ def validate_duration(value):
 
 
 def send_command(context, action, **values):
-    if action not in ('initialize','record','stop','shutdown','pid_engage','pid_tune'):
+    if action not in ('initialize','record','stop','shutdown','pid_engage','pid_tune','mock_throttle'):
         raise ValueError('Unknown engine command')
     directory=Path(context['command_directory'])
     directory.mkdir(parents=True,exist_ok=True)
@@ -362,6 +362,8 @@ def snapshot(window, context):
         elapsed=window.rec_time[-1] if window.rec_time else 0,
         samples=len(window.rec_time),duration_s=window.target_duration_sec,
         pid_ready=getattr(window,'pid_ready',False),pid_paused=getattr(window,'pid_paused',True),pid_phase=getattr(window,'pid_phase',''),pid_live=getattr(window,'pid_live',{}),
+        mock_throttle_prompt_ready=bool(context.get('simulation_mode') and context.get('test_reference')=='1.f.(2)' and getattr(window,'mock_throttle_prompt_ready',False)),
+        mock_throttle_applied=bool(getattr(window,'mock_throttle_applied',False)),
         controlling=bool(window.is_recording or getattr(window,'pid_controller_active',False)),recording=bool(window.is_recording and (getattr(window,'_control_method','replay')!='pid' or getattr(window,'pid_phase','')=='recording')),can_record=bool(getattr(window,'_control_method','replay')!='pid' and getattr(window,'_prepared',False)
             and window.current_stage=='Connected & Ready to Record' and not window.is_recording
             and window.p3d and window.p3d.is_connected() and window.brunner.sock) or bool(not getattr(window,'pid_automatic_workflow',False) and getattr(window,'pid_controller_active',False) and not window.is_recording and not getattr(window,'pid_paused',True)),
@@ -382,6 +384,8 @@ def worker_class(base,context,publish):
             self.report_initial_conditions=context.get('initial_conditions')
             self._stage_details=''
             self._outputs=[]
+            self.mock_throttle_prompt_ready=False
+            self.mock_throttle_applied=False
             self._prepared=False
             self._preparing=False
             self._shutting_down=False
@@ -408,6 +412,24 @@ def worker_class(base,context,publish):
 
         def handle_command(self,command):
             action=command['action']
+            if action=='mock_throttle':
+                if not context.get('simulation_mode') or context.get('test_reference')!='1.f.(2)':
+                    raise RuntimeError('The simulated throttle control is available only for Engine Deceleration in Simulation Mode.')
+                if not self.is_recording or not getattr(self,'mock_throttle_prompt_ready',False):
+                    raise RuntimeError('Wait for the 5-second full-power baseline prompt before changing simulated throttle.')
+                if getattr(self,'mock_throttle_applied',False):
+                    raise RuntimeError('The simulated throttle has already been moved to IDLE for this recording.')
+                percent=float(command.get('percent',float('nan')))
+                if not math.isfinite(percent) or percent!=0.0:
+                    raise ValueError('The simulation deceleration control only permits the IDLE (0%) command.')
+                if not self.p3d or not self.p3d.is_connected() or not self.p3d.simulation_running():
+                    raise RuntimeError('The simulated aircraft must be running during the recording.')
+                if not self.p3d.set_initial_throttle(0.0):
+                    raise RuntimeError('The simulated aircraft rejected the IDLE throttle command.')
+                self.mock_throttle_applied=True
+                self._stage_details='Simulation throttle set to IDLE (0%). The mock engine RPM is now decaying; simulation data is not aircraft qualification data.'
+                self._publish()
+                return
             if action in ('pid_engage','pid_tune') and getattr(self,'pid_automatic_workflow',False):
                 raise RuntimeError('PID Automatic is managed by the climb execution engine.')
             if action in ('pid_engage','pid_tune'):
