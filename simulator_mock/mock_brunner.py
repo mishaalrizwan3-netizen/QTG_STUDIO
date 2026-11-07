@@ -15,6 +15,7 @@ class MockBrunner:
         self.scenario = dict(scenario or {})
         self._lock = threading.RLock()
         self._connected = False
+        self.strict_io = True
         self._axes = {self.AXIS_PITCH: 0.0, self.AXIS_ROLL: 0.0, self.AXIS_RUDDER: 0.0}
         self._targets = dict(self._axes)
         self._forces = dict(self._axes)
@@ -58,6 +59,20 @@ class MockBrunner:
                         raise ValueError("Mock Brunner command is outside normalized axis range")
                     self._targets[axis] = max(-1.0, min(1.0, value))
                     self._axes[axis] = self._targets[axis]
+
+    def write_setting(self, axis, setting_id, fmt, val):
+        if not self._connected:
+            raise RuntimeError("Mock Brunner is disconnected")
+        if setting_id == 0x80:
+            self.move_actuators(
+                val if axis == self.AXIS_PITCH else None,
+                val if axis == self.AXIS_ROLL else None,
+                val if axis == self.AXIS_RUDDER else None)
+        elif setting_id == 0x70:
+            self._overrides = bool(val)
+        elif setting_id == 0xA0:
+            self._virtual_forces = {key: float(val) for key in self._virtual_forces}
+        return True
 
     def configure_replay_mode(self, axis_mask=None):
         if not self._connected:
