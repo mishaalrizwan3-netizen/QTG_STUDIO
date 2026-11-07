@@ -73,6 +73,7 @@ class MockP3D:
             "fuel_flow_pph": 0.0, "egt_c": 0.0, "engine_manifold_pressure_psi_1": 0.0,
             "bridge_version": "MOCK", "bridge_telemetry_sequence": 0, "last_updated": time.time(),
         }
+        self._weather_metar = "GLOB 00000KT 9999 SCT020 15/10 Q1013"
         self._rpm_target = 700.0
         self._throttle_target = 5.0
         self._ground_speed_override = None
