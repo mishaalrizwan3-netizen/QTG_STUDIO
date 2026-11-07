@@ -195,6 +195,21 @@ class MockAdapterTests(unittest.TestCase):
             sim._advance(force=True)
         self.assertAlmostEqual(sim.get_telemetry()["engine_rpm"], 2700.0, delta=2.0)
 
+    def test_mock_throttle_idle_command_causes_engine_rpm_to_decay(self):
+        sim = MockP3D()
+        sim.set_initial_throttle(100)
+        for _ in range(60):
+            sim._last_tick -= 0.25
+            sim._advance(force=True)
+        self.assertAlmostEqual(sim.get_telemetry()["engine_rpm"], 2700.0, delta=2.0)
+
+        sim.set_initial_throttle(0)
+        self.assertEqual(sim.get_telemetry()["engine_throttle_percent"], 0.0)
+        for _ in range(60):
+            sim._last_tick -= 0.25
+            sim._advance(force=True)
+        self.assertAlmostEqual(sim.get_telemetry()["engine_rpm"], 600.0, delta=2.0)
+
     def test_ground_creep_fault_is_explicit(self):
         sim = MockP3D(scenario={"ground_creep": True})
         sim.connect()
