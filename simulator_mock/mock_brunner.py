@@ -75,11 +75,11 @@ class MockBrunner:
         """Model the setting IDs actually sent by BrunnerInterface."""
         with self._lock:
             self._require_connection()
-            if axis != self.ALL_AXES and (axis not in self._axes):
+            if axis <= 0 or axis & ~self.ALL_AXES:
                 raise ValueError("Unknown Brunner axis or axis mask")
             self._settings[(axis, setting_id)] = val
             if setting_id == 0x80:  # Position command
-                if axis == self.ALL_AXES:
+                if axis not in self._axes:
                     raise ValueError("Position command requires one axis")
                 self.move_actuators(
                     val if axis == self.AXIS_PITCH else None,
