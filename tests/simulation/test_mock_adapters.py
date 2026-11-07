@@ -2,9 +2,23 @@
 import unittest
 
 from simulator_mock import MockP3D, MockBrunner
+from brunner.src.replay_support import validate_initial_airspeed
 
 
 class MockAdapterTests(unittest.TestCase):
+    def test_zero_ias_ground_deceleration_validation_accepts_stationary_state(self):
+        stationary = {
+            "airspeed_indicated": 0.0,
+            "sim_on_ground": 1.0,
+            "ground_speed": 0.0,
+        }
+        self.assertEqual(validate_initial_airspeed(
+            stationary, 0.0, on_ground=True), 0.0)
+
+        moving = dict(stationary, ground_speed=1.2)
+        with self.assertRaisesRegex(ValueError, "moving on the ground"):
+            validate_initial_airspeed(moving, 0.0, on_ground=True)
+
     def test_engine_deceleration_manual_initialization_keeps_aircraft_on_ground(self):
         import sys
         import threading
