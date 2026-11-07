@@ -41,10 +41,20 @@ class MockP3D:
             "flaps": 0.0, "measured_flaps_handle_index": 0.0,
             "plane_latitude": 32.235, "plane_longitude": 74.135,
             "on_ground": 1.0, "sim_on_ground": 1.0,
+            "velocity_world_x": 0.0, "velocity_world_y": 0.0, "velocity_world_z": 0.0,
+            "velocity_body_x": 0.0, "velocity_body_y": 0.0, "velocity_body_z": 0.0,
+            "rotation_velocity_body_x": 0.0, "rotation_velocity_body_y": 0.0, "rotation_velocity_body_z": 0.0,
+            "trim_elevator_angle_rad": 0.0, "trim_elevator_percent": 0.0,
+            "trim_aileron_percent": 0.0, "trim_rudder_percent": 0.0,
+            "engine_mixture_percent": 100.0, "engine_propeller_percent": 100.0,
+            "total_weight": 851.4, "total_fuel_quantity": 112.2,
+            "baro_pressure": 1013.25, "ambient_wind_dir": 0.0, "ambient_wind_spd": 0.0,
+            "roll_rate": 0.0, "pitch_rate": 0.0, "yaw_rate": 0.0,
+            "extended_causal_sequence": 1, "extended_causal_layout": "MOCK",
             "parking_brake_position": 1.0,
             "ambient_temp": 15.0, "ambient_pressure_mb": 1013.25,
             "fuel_flow_pph": 0.0, "egt_c": 0.0, "engine_manifold_pressure_psi_1": 0.0,
-            "bridge_version": "MOCK", "bridge_telemetry_sequence": 0,
+            "bridge_version": "MOCK", "bridge_telemetry_sequence": 0, "last_updated": time.time(),
         }
         self._rpm_target = 700.0
         self._throttle_target = 5.0
@@ -260,6 +270,8 @@ class MockP3D:
         self._state["engine_throttle_percent"] = throttle
         self._state["throttle1"] = throttle
         self._state["throttles"][0] = throttle
+        self._state["throttle"] = throttle
+        self._state["last_updated"] = now
         self._state["fuel_flow_pph"] = max(0.0, throttle * 0.42)
         self._state["egt_c"] = 250.0 + throttle * 3.0
         # Deliberate fault scenario: full power can cause ground creep despite brake.
@@ -269,8 +281,16 @@ class MockP3D:
             self._state["ground_speed"] = speed
             self._state["airspeed_indicated"] = speed
             self._state["plane_latitude"] += speed * 0.514444 * dt / 111320.0
+            self._state["velocity_world_x"] = speed * 0.514444
+            self._state["velocity_body_x"] = speed * 0.514444
         elif self._state["on_ground"]:
             self._state["ground_speed"] = 0.0
             self._state["airspeed_indicated"] = 0.0
+            self._state["velocity_world_x"] = 0.0
+            self._state["velocity_world_y"] = 0.0
+            self._state["velocity_world_z"] = 0.0
+            self._state["velocity_body_x"] = 0.0
+            self._state["velocity_body_y"] = 0.0
+            self._state["velocity_body_z"] = 0.0
         self._sequence += 1
         self._state["bridge_telemetry_sequence"] = self._sequence
