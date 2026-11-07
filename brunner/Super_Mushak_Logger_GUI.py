@@ -1585,16 +1585,27 @@ class SuperMushakLoggerApp(QMainWindow):
         is_ground_deceleration = (
             getattr(self, "_session_context", {}).get("test_reference") == "1.f.(2)"
         )
+        simulation_mode = bool(getattr(self, "_session_context", {}).get("simulation_mode"))
+        self.mock_throttle_prompt_ready = False
+        self.mock_throttle_applied = False
 
         while not self.stop_worker_event.is_set():
             now = time.perf_counter() - t0
             if now >= self.target_duration_sec:
                 break
             if is_ground_deceleration and not decel_prompt_sent and now >= 5.0:
-                self.sig_update_stage.emit(
-                    STAGE_RECORDING,
-                    "5-second full-power baseline complete — move the physical throttle rapidly to IDLE now."
-                )
+                if simulation_mode:
+                    self.mock_throttle_prompt_ready = True
+                    details = (
+                        "5-second full-power baseline complete — use the Simulated Throttle "
+                        "control in QTG to set throttle to IDLE (0%) now."
+                    )
+                else:
+                    details = (
+                        "5-second full-power baseline complete — move the physical throttle "
+                        "rapidly to IDLE now."
+                    )
+                self.sig_update_stage.emit(STAGE_RECORDING, details)
                 decel_prompt_sent = True
 
             # 1. Read Brunner Controls exclusively via UDP 15090
