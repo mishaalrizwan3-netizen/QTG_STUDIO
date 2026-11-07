@@ -31,7 +31,7 @@ To return to live mode, close QTG Studio and start it without setting
 From the repository root:
 
 ```bat
-python -m unittest tests.simulation.test_mock_adapters -v
+python -m unittest discover -s tests/simulation -v
 ```
 
 The mock aircraft model is deliberately simplified. It is useful for
