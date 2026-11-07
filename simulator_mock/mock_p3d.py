@@ -34,8 +34,6 @@ class MockP3D:
             "yaw_angle": 0.0,
             "pitch_angle": 0.0,
             "bank_angle": 0.0,
-            "vertical_speed": 0.0,
-            "indicated_altitude": 755.0,
             "engine_rpm": 700.0,
             "engine_throttle_percent": 5.0,
             "throttle": 5.0,
