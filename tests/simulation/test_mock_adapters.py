@@ -5,6 +5,50 @@ from simulator_mock import MockP3D, MockBrunner
 
 
 class MockAdapterTests(unittest.TestCase):
+    def test_engine_deceleration_manual_initialization_keeps_aircraft_on_ground(self):
+        import sys
+        import threading
+        from pathlib import Path
+
+        root = Path(__file__).resolve().parents[2]
+        sys.path.insert(0, str(root / "QTG_Studio_Antigravity_Single_Main"))
+        sys.path.insert(0, str(root / "brunner" / "src"))
+        import qtg_common_engine
+
+        sim = MockP3D()
+        sim.connect()
+
+        class FakeWindow:
+            def __init__(self):
+                self.p3d = sim
+                self.stop_worker_event = threading.Event()
+
+            def _wait_for_initial_altitude(self, altitude):
+                state = sim.get_telemetry()
+                if abs(state["pressure_alt"] - altitude) > 25:
+                    raise AssertionError("Mock aircraft did not reach requested ground-test altitude")
+
+            def _refresh_paused_telemetry(self):
+                sequence = sim.get_telemetry_sequence()
+                self.p3d.request_telemetry_once()
+                state = self.p3d.wait_for_fresh_telemetry(sequence, 2.0)
+                if state is None:
+                    raise AssertionError("Mock P3D did not return fresh paused telemetry")
+                if "engine_oil_temperature_c_1" not in state:
+                    state.update(self.p3d.get_engine_support_state(fresh=True))
+                return state
+
+        window = FakeWindow()
+        actual = qtg_common_engine.apply_manual_conditions(window, {
+            "alt_ft": 755, "ias_kt": 0, "throttle": 100, "flaps": 0,
+            "lat": 32.235, "lon": 74.135, "temperature_c": 15,
+            "on_ground": True,
+        })
+        self.assertEqual(actual["sim_on_ground"], 1.0)
+        self.assertEqual(actual["airspeed_indicated"], 0.0)
+        self.assertEqual(actual["ground_speed"], 0.0)
+        self.assertEqual(actual["engine_throttle_percent"], 100.0)
+
     def test_p3d_connect_pause_and_ground_initial_state(self):
         sim = MockP3D()
         self.assertTrue(sim.connect_and_run())
