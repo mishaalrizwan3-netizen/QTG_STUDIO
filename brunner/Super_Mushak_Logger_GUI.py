@@ -1110,9 +1110,22 @@ class SuperMushakLoggerApp(QMainWindow):
             return float(fresh.get('engine_rpm', float('nan'))), float((fresh.get('prop_rpms') or [float('nan')])[0])
         def matches(engine, prop):
             return all(math.isfinite(v) for v in (engine, prop)) and abs(engine-target) <= 10 and abs(prop-prop_target) <= 10
-        engine, prop = readings(self._refresh_paused_telemetry())
+        initial_telemetry = self._refresh_paused_telemetry()
+        engine, prop = readings(initial_telemetry)
         if not all(math.isfinite(v) and v > 300 for v in (engine,prop)):
             raise RuntimeError('Running engine RPM is unavailable during pre-roll.')
+        is_ground_deceleration = getattr(self, '_session_context', {}).get('test_reference') == '1.f.(2)'
+        initial_position = None
+        if is_ground_deceleration:
+            try:
+                initial_position = (
+                    float(initial_telemetry['plane_latitude']),
+                    float(initial_telemetry['plane_longitude'])
+                )
+            except (KeyError, TypeError, ValueError):
+                raise RuntimeError('Ground position telemetry is unavailable before RPM pre-roll.')
+            if not all(math.isfinite(value) for value in initial_position):
+                raise RuntimeError('Ground position telemetry is invalid before RPM pre-roll.')
         if not matches(engine,prop):
             deadline = time.monotonic()+20.0
             throttle = float(snapshot['throttle'])
@@ -1147,6 +1160,25 @@ class SuperMushakLoggerApp(QMainWindow):
                     raise RuntimeError('P3D did not confirm pause after engine pre-roll.')
                 if not sim.set_initial_throttle(float(snapshot['throttle'])):
                     raise RuntimeError('P3D rejected recorded throttle restoration after pre-roll.')
+            post_preroll_telemetry = self._refresh_paused_telemetry()
+            if is_ground_deceleration and initial_position is not None:
+                try:
+                    final_position = (
+                        float(post_preroll_telemetry['plane_latitude']),
+                        float(post_preroll_telemetry['plane_longitude'])
+                    )
+                    lat1, lon1 = map(math.radians, initial_position)
+                    lat2, lon2 = map(math.radians, final_position)
+                    dlat, dlon = lat2-lat1, lon2-lon1
+                    haversine = math.sin(dlat/2.0)**2 + math.cos(lat1)*math.cos(lat2)*math.sin(dlon/2.0)**2
+                    drift_m = 6371000.0 * 2.0 * math.asin(min(1.0, math.sqrt(haversine)))
+                except (KeyError, TypeError, ValueError, OverflowError):
+                    raise RuntimeError('Ground position telemetry is unavailable after RPM pre-roll.')
+                if not math.isfinite(drift_m) or drift_m > 1.0:
+                    raise RuntimeError(
+                        f'Aircraft moved {drift_m:.2f} m during engine RPM pre-roll. '
+                        'Ground deceleration replay is blocked; check parking-brake and ground-friction behaviour.'
+                    )
             self._restore_reference_state()
             self._prepare_reference_power()
             engine, prop = readings(self._refresh_paused_telemetry())
