@@ -253,8 +253,10 @@ class MockP3D:
         return True
 
     def set_initial_throttle(self, percent):
+        value = float(percent)
+        if not math.isfinite(value) or not 0.0 <= value <= 100.0:
+            raise ValueError("Initial throttle must be between 0 and 100 percent.")
         with self._lock:
-            value = max(0.0, min(100.0, float(percent)))
             self._throttle_target = value
             self._state["engine_throttle_percent"] = value
             self._state["throttle1"] = value
@@ -264,20 +266,28 @@ class MockP3D:
         return True
 
     def set_throttle(self, percent):
-        return self.set_initial_throttle(percent)
+        # Match the real client's disabled live-controller write.
+        return False
 
     def set_replay_throttle(self, percent):
-        return self.set_initial_throttle(percent)
+        value = float(percent)
+        if not math.isfinite(value) or not 0.0 <= value <= 100.0:
+            return False
+        return self.set_initial_throttle(value)
 
     def set_initial_flaps(self, index):
+        value = float(index)
+        if not math.isfinite(value) or value < 0 or value > 10 or value != int(value):
+            raise ValueError("Initial flap handle index must be an integer from 0 to 10.")
         with self._lock:
-            self._state["flaps"] = float(index)
-            self._state["measured_flaps_handle_index"] = float(index)
+            self._state["flaps"] = value
+            self._state["measured_flaps_handle_index"] = value
             self._sequence += 1
         return True
 
     def set_flaps_handle_index(self, index):
-        return self.set_initial_flaps(index)
+        # Match the real client's disabled live-controller write.
+        return False
 
     def set_global_weather_metar(self, metar):
         self._weather_metar = str(metar or "")
