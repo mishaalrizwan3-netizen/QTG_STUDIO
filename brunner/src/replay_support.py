@@ -97,6 +97,14 @@ def validate_initial_airspeed(telemetry, reference_kts, tolerance_kts=2.0,
         if abs(float(groundspeed)) > groundspeed_tolerance_kts:
             raise ValueError(f"Aircraft is moving on the ground ({float(groundspeed):.2f} kt). "
                              "Deceleration replay is blocked until the aircraft is stationary.")
+        parking_brake = telemetry.get("parking_brake_position")
+        if parking_brake is None or not math.isfinite(float(parking_brake)):
+            raise ValueError("Parking-brake telemetry is unavailable; ground deceleration replay is blocked.")
+        if float(parking_brake) < 0.5:
+            raise ValueError(
+                f"Parking brake is not confirmed engaged (position={float(parking_brake):.2f}). "
+                "Engage the parking brake before ground deceleration replay."
+            )
     return measured
 
 
