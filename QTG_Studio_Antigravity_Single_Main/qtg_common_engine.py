@@ -152,7 +152,9 @@ def launch(mode, spec, output_dir, reference=None, duration_s=None, control_meth
     output=Path(output_dir).resolve()
     output.mkdir(parents=True,exist_ok=True)
     token=f'{time.time_ns()}'
+    simulation_mode = os.environ.get('QTG_SIMULATION_MODE', '').strip() == '1'
     context={'test_reference':spec.reference,'title':spec.title,'mode':mode,
+             'simulation_mode':simulation_mode,
              'initial_conditions':initial_conditions,'selected_graphs':selected_graphs,'reference_csv':reference, 'control_method':control_method, 'pid_conditions':pid_conditions, 'validation_csv':validation_csv, 'duration_s':duration_s, 'command_directory':str(output/(token+'_commands')), 'status_file':str(output/(token+'_status.json')),
              'stop_file':str(output/(token+'_stop')), 'results_root':str(output.parent), 'result_directory':str(test_directory(output.parent,spec.reference,spec.title)),
              'initialization_policy':'operator settings for Manual/PID; selected Manual t0 for Recorded Replay'}
@@ -541,6 +543,15 @@ def run(context_path):
     stream=open(status_path.with_suffix('.log'),'a',encoding='utf-8',buffering=1)
     sys.stdout=sys.stderr=stream
     base=load_base()
+    if context.get('simulation_mode'):
+        # Explicit opt-in only: never fall back to mock hardware after a live connection fails.
+        mock_root = brunner_root().parent
+        if str(mock_root) not in sys.path:
+            sys.path.insert(0, str(mock_root))
+        from simulator_mock import MockP3D, MockBrunner
+        scenario = context.get('simulation_scenario') or {}
+        base.SimConnectClient = lambda app_name='QTG Mock P3D': MockP3D(app_name, scenario=scenario)
+        base.BrunnerInterface = lambda host='127.0.0.1', port=15090: MockBrunner(host=host, port=port, scenario=scenario)
     from PySide6.QtCore import QTimer
     from PySide6.QtWidgets import QApplication
     app=QApplication(sys.argv)
