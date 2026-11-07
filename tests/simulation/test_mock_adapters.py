@@ -59,6 +59,20 @@ class MockAdapterTests(unittest.TestCase):
         after = sim.get_telemetry()["engine_rpm"]
         self.assertEqual(before, after)
 
+    def test_engine_rpm_mock_targets_match_engine_test_power_points(self):
+        sim = MockP3D()
+        sim.set_initial_throttle(5)
+        for _ in range(60):
+            sim._last_tick -= 0.25
+            sim._advance(force=True)
+        self.assertAlmostEqual(sim.get_telemetry()["engine_rpm"], 705.0, delta=2.0)
+
+        sim.set_initial_throttle(100)
+        for _ in range(60):
+            sim._last_tick -= 0.25
+            sim._advance(force=True)
+        self.assertAlmostEqual(sim.get_telemetry()["engine_rpm"], 2700.0, delta=2.0)
+
     def test_ground_creep_fault_is_explicit(self):
         sim = MockP3D(scenario={"ground_creep": True})
         sim.connect()
