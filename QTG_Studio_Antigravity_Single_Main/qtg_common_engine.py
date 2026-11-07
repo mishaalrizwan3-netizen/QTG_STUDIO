@@ -121,6 +121,22 @@ def apply_manual_conditions(window,values):
             measured=float(actual.get(key,float('nan')))
             if not math.isfinite(measured) or abs(measured-target)>tolerance:
                 mismatches.append(f'{key}: requested {target:g}, actual {measured:g}')
+        # Ground engine-deceleration references must be stationary with the
+        # parking brake confirmed engaged; never infer brake state from UI settings.
+        if cfg['on_ground']:
+            for key,target,tolerance in (
+                ('sim_on_ground',1.0,.5),
+                ('ground_speed',0.0,.5),
+                ('airspeed_indicated',0.0,2.0),
+            ):
+                measured=float(actual.get(key,float('nan')))
+                if not math.isfinite(measured) or abs(measured-target)>tolerance:
+                    mismatches.append(f'{key}: required {target:g} ± {tolerance:g}, actual {measured:g}')
+            brake=float(actual.get('parking_brake_position',float('nan')))
+            if not math.isfinite(brake):
+                mismatches.append('parking_brake_position: telemetry unavailable')
+            elif brake<.5:
+                mismatches.append(f'parking_brake_position: parking brake is not engaged (actual {brake:g})')
         if not mismatches:break
         if time.monotonic()>=deadline:
             hints=['Check physical throttle position and simulator throttle-axis assignments.'] if any('engine_throttle_percent' in item for item in mismatches) else []
