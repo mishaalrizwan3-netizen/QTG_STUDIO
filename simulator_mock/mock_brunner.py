@@ -11,7 +11,10 @@ class MockBrunner:
     AXIS_RUDDER = 0x04
     ALL_AXES = AXIS_PITCH | AXIS_ROLL | AXIS_RUDDER
 
-    def __init__(self, *, scenario=None):
+    def __init__(self, host='127.0.0.1', port=15090, timeout=0.05, *, scenario=None):
+        self.host = host
+        self.port = port
+        self.timeout = timeout
         self.scenario = dict(scenario or {})
         self._lock = threading.RLock()
         self._connected = False
