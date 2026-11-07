@@ -19,6 +19,18 @@ class MockAdapterTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "moving on the ground"):
             validate_initial_airspeed(moving, 0.0, on_ground=True)
 
+        brake_released = dict(stationary, parking_brake_position=0.0)
+        with self.assertRaisesRegex(ValueError, "Parking brake is not confirmed engaged"):
+            validate_initial_airspeed(brake_released, 0.0, on_ground=True)
+
+        brake_unknown = dict(stationary)
+        with self.assertRaisesRegex(ValueError, "Parking-brake telemetry is unavailable"):
+            validate_initial_airspeed(brake_unknown, 0.0, on_ground=True)
+
+        brake_engaged = dict(stationary, parking_brake_position=1.0)
+        self.assertEqual(validate_initial_airspeed(
+            brake_engaged, 0.0, on_ground=True), 0.0)
+
     def test_engine_deceleration_manual_initialization_keeps_aircraft_on_ground(self):
         import sys
         import threading
