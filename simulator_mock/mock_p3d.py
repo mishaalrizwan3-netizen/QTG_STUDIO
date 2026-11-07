@@ -337,7 +337,8 @@ class MockP3D:
         if self._paused and not force:
             return
         throttle = self._throttle_target
-        target_rpm = 650.0 + 20.5 * throttle
+        # Mock-only calibration: 5% throttle is near idle (~705 RPM), full power ~2700 RPM.
+        target_rpm = 600.0 + 21.0 * throttle
         tau = 1.8
         self._rpm_target += (target_rpm - self._rpm_target) * (1.0 - math.exp(-dt / tau))
         rpm = self._rpm_target
