@@ -75,15 +75,28 @@ class BrunnerPositionTracker:
         return tuple(commands)
 
 
-def validate_initial_airspeed(telemetry, reference_kts, tolerance_kts=2.0):
-    """Reject inconsistent startup flight state, without changing measured data."""
+def validate_initial_airspeed(telemetry, reference_kts, tolerance_kts=2.0,
+                             on_ground=False, groundspeed_tolerance_kts=0.5):
+    """Validate fresh startup airspeed and, for ground tests, a stationary ground state."""
     measured = float(telemetry.get("airspeed_indicated", float("nan")))
     reference = float(reference_kts)
-    if not math.isfinite(measured) or not math.isfinite(reference) or reference <= 0:
+    if not math.isfinite(measured) or not math.isfinite(reference):
         raise ValueError("Initial airspeed is unavailable; replay was not started.")
+    if reference < 0 or (not on_ground and reference <= 0):
+        raise ValueError("Initial airspeed is invalid for this test condition; replay was not started.")
     if abs(measured-reference) > tolerance_kts:
         raise ValueError(f"Initial airspeed mismatch: Manual={reference:.2f} kt, "
                          f"Automatic={measured:.2f} kt. Replay stopped; reinitialize the aircraft.")
+    if on_ground:
+        ground_state = telemetry.get("sim_on_ground")
+        if ground_state is None or not math.isfinite(float(ground_state)) or float(ground_state) < 0.5:
+            raise ValueError("Ground deceleration test requires confirmed ON-GROUND telemetry; replay was not started.")
+        groundspeed = telemetry.get("ground_speed")
+        if groundspeed is None or not math.isfinite(float(groundspeed)):
+            raise ValueError("Groundspeed telemetry is unavailable; stationary condition cannot be verified.")
+        if abs(float(groundspeed)) > groundspeed_tolerance_kts:
+            raise ValueError(f"Aircraft is moving on the ground ({float(groundspeed):.2f} kt). "
+                             "Deceleration replay is blocked until the aircraft is stationary.")
     return measured
 
 
