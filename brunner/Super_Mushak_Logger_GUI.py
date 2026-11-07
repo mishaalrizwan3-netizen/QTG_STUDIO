@@ -711,12 +711,14 @@ class SuperMushakLoggerApp(QMainWindow):
 
                 # Load initial conditions JSON if available
                 json_ref = os.path.splitext(ref_path)[0] + "_init_conditions.json"
+                reference_metadata = {}
                 if not os.path.exists(json_ref):
                     json_ref = os.path.splitext(ref_path)[0] + "_initial_state.json"
                 if os.path.exists(json_ref):
                     try:
                         with open(json_ref, "r", encoding="utf-8") as jf:
                             data = json.load(jf)
+                            reference_metadata = data
                             self.ref_manual_snapshot = data.get("manual", data)
                     except Exception:
                         self.ref_manual_snapshot = {}
@@ -729,7 +731,7 @@ class SuperMushakLoggerApp(QMainWindow):
                 simulation_mode = bool(getattr(self, "_session_context", {}).get("simulation_mode"))
                 reference_is_simulation = (
                     "simulation_only" in Path(ref_path).name.lower()
-                    or (os.path.exists(json_ref) and bool(data.get("simulation_only")))
+                    or bool(reference_metadata.get("simulation_only"))
                 )
                 if simulation_mode and not reference_is_simulation:
                     raise RuntimeError(
