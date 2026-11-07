@@ -24,10 +24,31 @@ class MockAdapterTests(unittest.TestCase):
         sim = MockP3D()
         self.assertTrue(sim.set_position_airborne(
             2000, 80, 1.0, 2.0, 48.4, 32.235, 74.135, 35.0))
+        self.assertTrue(sim.wait_for_paused())
         state = sim.get_telemetry()
         self.assertAlmostEqual(state["indicated_altitude"], 2000.0)
         self.assertAlmostEqual(state["airspeed_indicated"], 80.0)
         self.assertEqual(state["sim_on_ground"], 0.0)
+
+    def test_connect_and_run_accepts_real_startup_options(self):
+        connected = []
+        sim = MockP3D()
+        self.assertTrue(sim.connect_and_run(
+            on_connected=lambda: connected.append(True),
+            place_airborne=True, alt_ft=2500, speed_kts=90,
+            initial_pitch=2, initial_bank=1, initial_hdg=45,
+            initial_lat=32.2, initial_lon=74.1, initial_throttle=40))
+        self.assertEqual(connected, [True])
+        state = sim.get_telemetry()
+        self.assertAlmostEqual(state["indicated_altitude"], 2500)
+        self.assertAlmostEqual(state["airspeed_indicated"], 90)
+
+    def test_engine_support_telemetry_has_required_temperature_fields(self):
+        sim = MockP3D()
+        support = sim.get_engine_support_state(fresh=True)
+        self.assertIn("engine_oil_temperature_c_1", support)
+        self.assertIn("engine_cylinder_head_temperature_c_1", support)
+        self.assertIn("engine_carburetor_temperature_c_1", support)
 
     def test_paused_telemetry_request_does_not_advance_engine(self):
         sim = MockP3D()
