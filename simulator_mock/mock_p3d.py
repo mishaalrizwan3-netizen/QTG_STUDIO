@@ -137,8 +137,29 @@ class MockP3D:
             self._sequence += 1
         return True
 
-    def set_position_airborne(self, **kwargs):
-        return self.queue_position_airborne(**kwargs)
+    def set_position_airborne(
+        self,
+        alt_ft=3000.0,
+        speed_kts=80.0,
+        pitch_deg=0.0,
+        bank_deg=0.0,
+        hdg_deg=48.4,
+        lat=32.23383333,
+        lon=74.12366667,
+        throttle=80.0,
+    ):
+        """Match SimConnectClient.set_position_airborne positional/default API."""
+        return self.queue_position_airborne(
+            alt_ft=alt_ft,
+            speed_kts=speed_kts,
+            pitch_deg=pitch_deg,
+            bank_deg=bank_deg,
+            hdg_deg=hdg_deg,
+            lat=lat,
+            lon=lon,
+            throttle=throttle,
+            on_ground=False,
+        )
 
     def set_exact_pose_state_no_airspeed(self, state):
         try:
