@@ -1339,6 +1339,27 @@ class SuperMushakLoggerApp(QMainWindow):
         if self.stop_worker_event.is_set():
             raise RuntimeError("Automatic preparation cancelled.")
         selected_snapshot = self.ref_manual_snapshot if reference_snapshot is None else reference_snapshot
+
+        # Ground engine deceleration is a stationary, high-power condition.
+        # Do not perform the normal live airflow/altimeter recovery for Automatic
+        # preparation: that path unpauses P3D and could let the aircraft creep.
+        # Confirm zero IAS, on-ground state, zero groundspeed and parking brake
+        # from fresh paused telemetry, then leave P3D paused.
+        if (getattr(self, "test_mode", "") == "auto" and
+                getattr(self, "_session_context", {}).get("test_reference") == "1.f.(2)"):
+            if not sim.wait_for_paused(3.0):
+                raise RuntimeError("Ground deceleration initialization requires confirmed paused P3D.")
+            fresh = self._refresh_paused_telemetry()
+            validate_initial_airspeed(
+                fresh, selected_snapshot.get("airspeed", 0.0), on_ground=True
+            )
+            print(
+                "[Auto Prep] Ground deceleration stationary state and parking brake "
+                "verified while P3D remained paused; live airflow recovery skipped.",
+                flush=True,
+            )
+            return
+
         reference = selected_snapshot.get("telemetry", {})
         wind_keys = ("aircraft_wind_x_kt", "aircraft_wind_y_kt", "aircraft_wind_z_kt")
         expected_wind = None
