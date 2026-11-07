@@ -87,8 +87,13 @@ class MockP3D:
         return self._sequence
 
     def request_telemetry_once(self):
+        # Refresh telemetry sequence without advancing physics while paused.
         with self._lock:
-            self._advance(force=True)
+            if self._paused:
+                self._sequence += 1
+                self._state["bridge_telemetry_sequence"] = self._sequence
+            else:
+                self._advance(force=True)
         return True
 
     def wait_for_fresh_telemetry(self, previous_sequence, timeout_sec=1.0):
@@ -125,6 +130,53 @@ class MockP3D:
     def set_position_airborne(self, **kwargs):
         return self.queue_position_airborne(**kwargs)
 
+    def set_exact_pose_state_no_airspeed(self, state):
+        try:
+            return self.queue_position_airborne(
+                alt_ft=state["altitude_ft"], speed_kts=0.0,
+                pitch_deg=state["pitch_deg"], bank_deg=state["bank_deg"],
+                hdg_deg=state["true_heading_deg"], lat=state["latitude_deg"],
+                lon=state["longitude_deg"], on_ground=bool(self._state["on_ground"]))
+        except (KeyError, TypeError, ValueError):
+            return False
+
+    def set_initial_instruments(self, vertical_speed_fpm, indicated_altitude_ft):
+        with self._lock:
+            self._state["vertical_speed"] = float(vertical_speed_fpm)
+            self._state["indicated_altitude"] = float(indicated_altitude_ft)
+            self._sequence += 1
+        return True
+
+    def set_initial_dynamic_state(self, state):
+        keys = ("velocity_world_x_fps", "velocity_world_y_fps", "velocity_world_z_fps",
+                "velocity_body_x_fps", "velocity_body_y_fps", "velocity_body_z_fps",
+                "rotation_velocity_body_x_rad_s", "rotation_velocity_body_y_rad_s",
+                "rotation_velocity_body_z_rad_s")
+        try:
+            values = {key: float(state[key]) for key in keys}
+            if not all(math.isfinite(value) for value in values.values()):
+                return False
+            with self._lock:
+                self._state.update(values)
+                self._sequence += 1
+            return True
+        except (KeyError, TypeError, ValueError):
+            return False
+
+    def set_initial_trim(self, elevator_trim_rad, aileron_trim_pct, rudder_trim_pct):
+        with self._lock:
+            self._state.update({"trim_elevator_angle_rad": float(elevator_trim_rad),
+                                "trim_aileron_percent": float(aileron_trim_pct),
+                                "trim_rudder_percent": float(rudder_trim_pct)})
+            self._sequence += 1
+        return True
+
+    def set_payload_station_weights(self, *args, **kwargs):
+        return True
+
+    def set_all_fuel_tank_levels(self, *args, **kwargs):
+        return True
+
     def set_initial_throttle(self, percent):
         with self._lock:
             value = max(0.0, min(100.0, float(percent)))
@@ -153,10 +205,11 @@ class MockP3D:
         return self.set_initial_flaps(index)
 
     def set_global_weather_metar(self, metar):
+        self._weather_metar = str(metar or "")
         return True
 
     def get_global_weather_metar(self):
-        return ""
+        return getattr(self, "_weather_metar", "")
 
     def set_initial_engine_levers(self, *args, **kwargs):
         return True
@@ -164,13 +217,30 @@ class MockP3D:
     def set_engine_controls(self, *args, **kwargs):
         return True
 
-    def get_engine_support_state(self):
-        return {}
+    def get_engine_support_state(self, fresh=False, timeout=0.6):
+        return {"egt_c": self._state["egt_c"]}
 
-    def restore_engine_thermal_state(self, *args, **kwargs):
-        return True
+    def restore_engine_thermal_state(self, state, timeout=3.0):
+        with self._lock:
+            for key, value in dict(state or {}).items():
+                if isinstance(value, (int, float)) and math.isfinite(float(value)):
+                    self._state[key] = float(value)
+            self._sequence += 1
+        return self.get_engine_support_state()
 
     def set_initial_fuel_pressure(self, *args, **kwargs):
+        return True
+
+    def set_daytime(self):
+        return True
+
+    def set_fuel_tank_levels(self, *args, **kwargs):
+        return True
+
+    def set_linear_body_acceleration(self, *args, **kwargs):
+        return True
+
+    def set_rotation_body_acceleration(self, *args, **kwargs):
         return True
 
     def _advance(self, force=False):
