@@ -1822,7 +1822,9 @@ class SuperMushakLoggerApp(QMainWindow):
     def _save_csv_and_generate_reports(self):
         ts = time.strftime("%Y-%m-%d_%H-%M-%S")
         prefix = "manual" if self.test_mode == "manual" else "auto"
-        csv_filename = f"Super_Mushak_{prefix}_takeoff_data_{ts}.csv"
+        simulation_only = bool(getattr(self, "_session_context", {}).get("simulation_mode"))
+        simulation_tag = "SIMULATION_ONLY_" if simulation_only else ""
+        csv_filename = f"Super_Mushak_{simulation_tag}{prefix}_takeoff_data_{ts}.csv"
         csv_path = str(self.data_dir / csv_filename)
 
         print(f"\n[SAVE] Saving CSV to: {csv_path}")
@@ -1913,6 +1915,8 @@ class SuperMushakLoggerApp(QMainWindow):
                 f"Engine_RPM_{prefix.capitalize()}",
                 f"Throttle_{prefix.capitalize()}"
             ]
+            if simulation_only:
+                fieldnames.insert(0, "Data Status")
 
             with open(csv_path, "w", newline="", encoding="utf-8") as f:
                 writer = csv.DictWriter(f, fieldnames=fieldnames)
@@ -2035,6 +2039,8 @@ class SuperMushakLoggerApp(QMainWindow):
                         f"Engine_RPM_{prefix.capitalize()}": round(float(rpm), 0),
                         f"Throttle_{prefix.capitalize()}": round(float(throt), 1),
                     }
+                    if simulation_only:
+                        row_dict["Data Status"] = "SIMULATION ONLY - NOT FOR QTG QUALIFICATION"
                     writer.writerow(row_dict)
 
             print(f"[OK] CSV saved successfully with full QTG columns: {len(self.rec_time)} rows.")
@@ -2045,6 +2051,8 @@ class SuperMushakLoggerApp(QMainWindow):
             if self.test_mode == "auto" and snapshot:
                 snapshot['rpm_startup_readiness'] = getattr(self, '_session_context', {}).get('rpm_startup_readiness')
             init_dict = {
+                "simulation_only": simulation_only,
+                "data_status": "SIMULATION ONLY - NOT FOR QTG QUALIFICATION" if simulation_only else "LIVE",
                 self.test_mode: snapshot,
                 "manual_ref_csv": self.active_manual_ref_path if self.test_mode == "auto" else "",
                 "replay_axis_offsets": getattr(self, "replay_axis_offsets", (0.0, 0.0, 0.0)),
@@ -2061,7 +2069,8 @@ class SuperMushakLoggerApp(QMainWindow):
             # Also update local pitch_roll_rudder_telemetry.csv for fast analysis tools
             local_directory = Path(CURRENT_DIR)/"Output"/"recordings"
             local_directory.mkdir(parents=True,exist_ok=True)
-            local_csv = str(local_directory/"pitch_roll_rudder_telemetry.csv")
+            local_name = "pitch_roll_rudder_telemetry_SIMULATION_ONLY.csv" if simulation_only else "pitch_roll_rudder_telemetry.csv"
+            local_csv = str(local_directory/local_name)
             try:
                 import shutil
                 shutil.copyfile(csv_path, local_csv)
@@ -2072,59 +2081,67 @@ class SuperMushakLoggerApp(QMainWindow):
             QMessageBox.critical(self, "Save Error", f"Could not save CSV file:\n{e}")
             return
 
-        # Generate Official 6-Page QTG PDF Report with progress bar and auto-open
-        pdf_path = None
-        progress_dialog: Optional[QProgressDialog] = None
-        try:
-            print("[REPORT] Generating official 6-page evaluation PDF report via plot_graphs.py...")
-            self.lbl_rec_status.setText("GENERATING PDF REPORT...")
-            self.lbl_rec_status.setStyleSheet("color: #89b4fa;")
-            self.lbl_rec_progress.setText("Rendering 6-Page QTG PDF Report... Please wait")
-            self.rec_progress.setRange(0, 0)  # Animated marquee progress bar
-
-            progress_dialog = QProgressDialog(self)
-            progress_dialog.setLabelText("Generating 6-Page Evaluation PDF Report...\nPlease wait.")
-            progress_dialog.setWindowTitle("Generating PDF Report")
-            progress_dialog.setWindowModality(Qt.WindowModality.WindowModal)
-            progress_dialog.setCancelButton(None)
-            progress_dialog.setRange(0, 0)
-            progress_dialog.setMinimumDuration(0)
-            progress_dialog.setValue(0)
-            progress_dialog.show()
-            QApplication.processEvents()
-
-            pdf_path = plot_graphs.plot_aligned_comparison(csv_path, manual_csv_path=self.active_manual_ref_path,
-                test_reference=getattr(self,"_session_context",{}).get("test_reference"), control_method=getattr(self,"control_method","replay"), validation_csv_path=getattr(self,"validation_csv",None), run_fault=getattr(self,"pid_fault",None), selected_graphs=getattr(self,"report_graphs",None), initial_conditions=getattr(self,"report_initial_conditions",None), pid_target_ias=getattr(self,"pid_conditions",{}).get("target_ias",80))
-
-            if progress_dialog is not None:
-                progress_dialog.close()
+        if simulation_only:
+            print("[SIMULATION ONLY] CSV and initialization metadata saved; QTG evaluation PDF generation is disabled.", flush=True)
             self.rec_progress.setRange(0, self.target_duration_sec)
             self.rec_progress.setValue(self.target_duration_sec)
+            self.lbl_rec_status.setText("SIMULATION ONLY - CSV SAVED")
+            self.lbl_rec_status.setStyleSheet("color: #f9e2af;")
+            self.lbl_rec_progress.setText("Simulated data saved. No qualification report was generated.")
+        else:
+            # Generate Official 6-Page QTG PDF Report with progress bar and auto-open
+            pdf_path = None
+            progress_dialog: Optional[QProgressDialog] = None
+            try:
+                print("[REPORT] Generating official 6-page evaluation PDF report via plot_graphs.py...")
+                self.lbl_rec_status.setText("GENERATING PDF REPORT...")
+                self.lbl_rec_status.setStyleSheet("color: #89b4fa;")
+                self.lbl_rec_progress.setText("Rendering 6-Page QTG PDF Report... Please wait")
+                self.rec_progress.setRange(0, 0)  # Animated marquee progress bar
 
-            if pdf_path and os.path.exists(pdf_path):
-                print(f"[SUCCESS] Official QTG Report generated: {pdf_path}")
-                self.lbl_rec_status.setText("COMPLETED - REPORT OPENED")
-                self.lbl_rec_status.setStyleSheet("color: #a6e3a1;")
-                self.lbl_rec_progress.setText(f"Report ready: {os.path.basename(pdf_path)}")
-                try:
-                    os.startfile(pdf_path)
-                    print(f"[OPEN] Automatically opened report: {pdf_path}")
-                except Exception as open_err:
-                    print(f"[OPEN NOTE] Could not automatically open PDF: {open_err}")
-            else:
-                self.lbl_rec_status.setText("COMPLETED")
-                self.lbl_rec_status.setStyleSheet("color: #a6e3a1;")
-        except Exception as e:
-            if progress_dialog is not None:
-                try:
+                progress_dialog = QProgressDialog(self)
+                progress_dialog.setLabelText("Generating 6-Page Evaluation PDF Report...\nPlease wait.")
+                progress_dialog.setWindowTitle("Generating PDF Report")
+                progress_dialog.setWindowModality(Qt.WindowModality.WindowModal)
+                progress_dialog.setCancelButton(None)
+                progress_dialog.setRange(0, 0)
+                progress_dialog.setMinimumDuration(0)
+                progress_dialog.setValue(0)
+                progress_dialog.show()
+                QApplication.processEvents()
+
+                pdf_path = plot_graphs.plot_aligned_comparison(csv_path, manual_csv_path=self.active_manual_ref_path,
+                    test_reference=getattr(self,"_session_context",{}).get("test_reference"), control_method=getattr(self,"control_method","replay"), validation_csv_path=getattr(self,"validation_csv",None), run_fault=getattr(self,"pid_fault",None), selected_graphs=getattr(self,"report_graphs",None), initial_conditions=getattr(self,"report_initial_conditions",None), pid_target_ias=getattr(self,"pid_conditions",{}).get("target_ias",80))
+
+                if progress_dialog is not None:
                     progress_dialog.close()
-                except Exception:
-                    pass
-            self.rec_progress.setRange(0, self.target_duration_sec)
-            self.rec_progress.setValue(self.target_duration_sec)
-            print(f"[REPORT NOTE] plot_graphs generator note: {e}")
-            self.lbl_rec_status.setText("COMPLETED (Report note)")
-            self.lbl_rec_progress.setText(f"Report note: {e}")
+                self.rec_progress.setRange(0, self.target_duration_sec)
+                self.rec_progress.setValue(self.target_duration_sec)
+
+                if pdf_path and os.path.exists(pdf_path):
+                    print(f"[SUCCESS] Official QTG Report generated: {pdf_path}")
+                    self.lbl_rec_status.setText("COMPLETED - REPORT OPENED")
+                    self.lbl_rec_status.setStyleSheet("color: #a6e3a1;")
+                    self.lbl_rec_progress.setText(f"Report ready: {os.path.basename(pdf_path)}")
+                    try:
+                        os.startfile(pdf_path)
+                        print(f"[OPEN] Automatically opened report: {pdf_path}")
+                    except Exception as open_err:
+                        print(f"[OPEN NOTE] Could not automatically open PDF: {open_err}")
+                else:
+                    self.lbl_rec_status.setText("COMPLETED")
+                    self.lbl_rec_status.setStyleSheet("color: #a6e3a1;")
+            except Exception as e:
+                if progress_dialog is not None:
+                    try:
+                        progress_dialog.close()
+                    except Exception:
+                        pass
+                self.rec_progress.setRange(0, self.target_duration_sec)
+                self.rec_progress.setValue(self.target_duration_sec)
+                print(f"[REPORT NOTE] plot_graphs generator note: {e}")
+                self.lbl_rec_status.setText("COMPLETED (Report note)")
+                self.lbl_rec_progress.setText(f"Report note: {e}")
 
         # Refresh dropdown so this new manual is immediately selectable
         self._refresh_manual_reference_selector()
@@ -2137,9 +2154,13 @@ class SuperMushakLoggerApp(QMainWindow):
         self.cmb_manual_reference.clear()
 
         # Scan for real manual flight test CSVs in data directory
+        simulation_mode = bool(getattr(self, "_session_context", {}).get("simulation_mode"))
         def is_valid_flight(p):
             name_l = p.name.lower()
             if any(k in name_l for k in ["diagnostic", "commissioning", "legacy_plot", "test_qtg"]):
+                return False
+            is_simulated = "simulation_only" in name_l
+            if is_simulated != simulation_mode:
                 return False
             return "manual" in name_l and p.suffix == ".csv"
 
