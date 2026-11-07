@@ -149,6 +149,70 @@ def apply_manual_conditions(window,values):
             try: sim.set_initial_flaps(cfg['flaps'])
             except Exception: pass
         window.stop_worker_event.wait(.05)
+    # Engine deceleration Manual references must begin at stabilized maximum
+    # takeoff RPM. Build that state only while continuously verifying the
+    # aircraft remains braked, on the ground, and stationary.
+    if cfg['on_ground'] and str(getattr(window, '_session_context', {}).get('test_reference', '')) == '1.f.(2)':
+        target_rpm=float(cfg.get('target_rpm',2700.0))
+        if not math.isfinite(target_rpm) or not 300.0 <= target_rpm <= 4000.0:
+            raise RuntimeError('Invalid Super Mushshak deceleration target RPM.')
+        if not sim.wait_for_paused(3.0):
+            raise RuntimeError('Ground deceleration RPM setup requires paused P3D.')
+        initial=window._refresh_paused_telemetry()
+        def ground_guard(sample):
+            on_ground=float(sample.get('sim_on_ground',float('nan')))
+            speed=float(sample.get('ground_speed',float('nan')))
+            brake=float(sample.get('parking_brake_position',float('nan')))
+            if not math.isfinite(on_ground) or on_ground < .5:
+                raise RuntimeError('Ground deceleration setup aborted: aircraft is not confirmed on the ground.')
+            if not math.isfinite(brake) or brake < .5:
+                raise RuntimeError('Ground deceleration setup aborted: parking brake is not confirmed engaged.')
+            if not math.isfinite(speed) or abs(speed) > .5:
+                raise RuntimeError(f'Ground deceleration setup aborted: aircraft is moving (groundspeed {speed:g} kt).')
+        ground_guard(initial)
+        deadline=time.monotonic()+30.0
+        stable_since=None
+        stable_count=0
+        sim.unpause_sim()
+        try:
+            while time.monotonic() < deadline:
+                if window.stop_worker_event.is_set():
+                    raise RuntimeError('Ground deceleration RPM stabilization cancelled.')
+                sequence=sim.get_telemetry_sequence()
+                if not sim.request_telemetry_once():
+                    raise RuntimeError('P3D rejected ground RPM stabilization telemetry request.')
+                fresh=sim.wait_for_fresh_telemetry(sequence,1.0)
+                if fresh is None:
+                    raise RuntimeError('No fresh telemetry during ground RPM stabilization.')
+                ground_guard(fresh)
+                engine=float(fresh.get('engine_rpm',float('nan')))
+                props=fresh.get('prop_rpms') or []
+                prop=float(props[0]) if props else float('nan')
+                now=time.monotonic()
+                if (math.isfinite(engine) and math.isfinite(prop) and
+                        abs(engine-target_rpm)<=10.0 and abs(prop-target_rpm)<=10.0):
+                    stable_count+=1
+                    if stable_since is None: stable_since=now
+                    if stable_count>=5 and now-stable_since>=1.5:
+                        break
+                else:
+                    stable_since=None
+                    stable_count=0
+                time.sleep(.05)
+            else:
+                raise RuntimeError(f'Ground deceleration engine did not stabilize at {target_rpm:.0f} RPM within 30 seconds; aircraft remained protected by the ground/brake checks.')
+        finally:
+            sim.pause_sim()
+            if not sim.wait_for_paused(3.0):
+                raise RuntimeError('P3D did not confirm pause after ground RPM stabilization.')
+        final=window._refresh_paused_telemetry()
+        ground_guard(final)
+        engine=float(final.get('engine_rpm',float('nan')))
+        props=final.get('prop_rpms') or []
+        prop=float(props[0]) if props else float('nan')
+        if not all(math.isfinite(v) and abs(v-target_rpm)<=10.0 for v in (engine,prop)):
+            raise RuntimeError(f'Ground deceleration RPM changed after pause: engine={engine:g}, prop={prop:g}, target={target_rpm:.0f}.')
+        actual=final
     return actual
 
 
