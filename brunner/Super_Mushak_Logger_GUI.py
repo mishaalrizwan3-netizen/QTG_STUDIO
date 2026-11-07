@@ -580,10 +580,21 @@ class SuperMushakLoggerApp(QMainWindow):
                 if configured is not None:
                     from qtg_common_engine import apply_manual_conditions
                     actual=apply_manual_conditions(self,configured)
-                    self.sig_update_stage.emit(STAGE_CONNECTED_READY,
-                        f"Manual settings applied: altitude (MSL) {actual['pressure_alt']:.0f} ft "
-                        f"(requested {configured['alt_ft']:.0f} ft), initial airspeed {configured['ias_kt']:.0f} kt. "
-                        "Simulator remains paused; indicated instruments may refresh after unpausing.")
+                    if (getattr(self, "_session_context", {}).get("test_reference") == "1.f.(2)"
+                            and configured.get("on_ground")):
+                        details = (
+                            f"Ground deceleration ready: engine {actual['engine_rpm']:.0f} RPM stabilized; "
+                            "aircraft confirmed stationary with parking brake engaged. "
+                            "For this 21-second capture, keep full throttle for the first 5 seconds, "
+                            "then move the physical throttle rapidly to idle. P3D is paused until Record."
+                        )
+                    else:
+                        details = (
+                            f"Manual settings applied: altitude (MSL) {actual['pressure_alt']:.0f} ft "
+                            f"(requested {configured['alt_ft']:.0f} ft), initial airspeed {configured['ias_kt']:.0f} kt. "
+                            "Simulator remains paused; indicated instruments may refresh after unpausing."
+                        )
+                    self.sig_update_stage.emit(STAGE_CONNECTED_READY, details)
                     return
 
                 # 2. Teleport aircraft in Prepar3D to airborne initial conditions
