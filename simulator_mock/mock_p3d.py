@@ -77,10 +77,36 @@ class MockP3D:
         self._throttle_target = 5.0
         self._ground_speed_override = None
 
-    def connect_and_run(self):
+    def connect_and_run(
+        self, on_connected=None, on_error=None, place_at_rahwali=False,
+        place_airborne=False, alt_ft=3000.0, speed_kts=80.0,
+        initial_pitch=0.0, initial_bank=0.0, initial_hdg=48.4,
+        initial_lat=32.23383333, initial_lon=74.12366667,
+        initial_throttle=80.0,
+    ):
+        """Accept the real SimConnect connection/startup options in offline mode."""
+        if self.scenario.get("disconnect"):
+            message = "Mock P3D connection failure requested by scenario"
+            if callable(on_error):
+                on_error(message)
+            return False
         with self._lock:
             self._connected = True
             self._last_tick = time.monotonic()
+        if place_at_rahwali:
+            self.queue_position_airborne(
+                alt_ft=750.236, speed_kts=0.0, pitch_deg=0.0, bank_deg=0.0,
+                hdg_deg=48.4, lat=32.23383333, lon=74.12366667,
+                throttle=initial_throttle, on_ground=True,
+            )
+        elif place_airborne:
+            self.set_position_airborne(
+                alt_ft=alt_ft, speed_kts=speed_kts, pitch_deg=initial_pitch,
+                bank_deg=initial_bank, hdg_deg=initial_hdg, lat=initial_lat,
+                lon=initial_lon, throttle=initial_throttle,
+            )
+        if callable(on_connected):
+            on_connected()
         return True
 
     def connect(self):
@@ -165,18 +191,19 @@ class MockP3D:
         lon=74.12366667,
         throttle=80.0,
     ):
-        """Match SimConnectClient.set_position_airborne positional/default API."""
-        return self.queue_position_airborne(
-            alt_ft=alt_ft,
-            speed_kts=speed_kts,
-            pitch_deg=pitch_deg,
-            bank_deg=bank_deg,
-            hdg_deg=hdg_deg,
-            lat=lat,
-            lon=lon,
-            throttle=throttle,
-            on_ground=False,
+        """Match the real client's airborne placement and paused-state behaviour."""
+        ok = self.queue_position_airborne(
+            alt_ft=alt_ft, speed_kts=speed_kts, pitch_deg=pitch_deg,
+            bank_deg=bank_deg, hdg_deg=hdg_deg, lat=lat, lon=lon,
+            throttle=throttle, on_ground=False,
         )
+        if not ok:
+            return False
+        self.pause_sim()
+        self.set_daytime()
+        self.pause_sim()
+        self.request_telemetry_once()
+        return True
 
     def set_exact_pose_state_no_airspeed(self, state):
         try:
@@ -256,7 +283,7 @@ class MockP3D:
         self._weather_metar = str(metar or "")
         return True
 
-    def get_global_weather_metar(self):
+    def get_global_weather_metar(self, timeout_sec=1.5):
         return getattr(self, "_weather_metar", "")
 
     def set_initial_engine_levers(self, *args, **kwargs):
@@ -266,7 +293,19 @@ class MockP3D:
         return True
 
     def get_engine_support_state(self, fresh=False, timeout=0.6):
-        return {"egt_c": self._state["egt_c"]}
+        if fresh:
+            self.request_telemetry_once()
+        return {
+            "engine_oil_temperature_c_1": self._state.get("engine_oil_temperature_c_1", 70.0),
+            "engine_cylinder_head_temperature_c_1": self._state.get("engine_cylinder_head_temperature_c_1", 150.0),
+            "engine_carburetor_temperature_c_1": self._state.get("engine_carburetor_temperature_c_1", 20.0),
+            "electrical_master_battery": 1.0,
+            "engine_master_alternator_1": 1.0,
+            "general_eng_fuel_pump_switch_1": 1.0,
+            "engine_fuel_valve_1": self._state.get("engine_fuel_valve_1", 1.0),
+            "general_eng_starter_1": 0.0,
+            "engine_support_sequence": self._sequence,
+        }
 
     def restore_engine_thermal_state(self, state, timeout=3.0):
         with self._lock:
