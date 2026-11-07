@@ -44,3 +44,13 @@ The source-development mode is wired into the QTG child worker. A frozen
 portable build must not be used for simulation mode until the packaging
 configuration explicitly includes the `simulator_mock` package and the
 release is checked. Keep the Sim PC's production package in live mode.
+
+
+## Simulation output safeguards
+
+Simulation recordings are written with `SIMULATION_ONLY` in the filename and
+a `Data Status` column. Their initialization JSON is also marked
+`simulation_only: true`. The simulated manual-reference selector only offers
+simulation recordings while simulation mode is enabled; live mode excludes
+them. The application does not generate the official QTG evaluation PDF for
+simulation runs.
