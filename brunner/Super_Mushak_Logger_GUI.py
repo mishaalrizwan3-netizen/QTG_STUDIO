@@ -1720,7 +1720,10 @@ class SuperMushakLoggerApp(QMainWindow):
                     self.sig_update_stage.emit(STAGE_CONNECTION_ERROR, "No fresh telemetry after unpause.")
                     return
                 try:
-                    validate_initial_airspeed(fresh, self.ref_manual_snapshot["airspeed"])
+                    validate_initial_airspeed(
+                        fresh, self.ref_manual_snapshot["airspeed"],
+                        on_ground=getattr(self, '_session_context', {}).get('test_reference') == '1.f.(2)'
+                    )
                 except ValueError as exc:
                     self.p3d.pause_sim()
                     self.brunner.release_controls()
