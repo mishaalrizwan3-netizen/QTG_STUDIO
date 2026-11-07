@@ -2248,10 +2248,13 @@ class App(tk.Tk):
         if state.get("test_reference") != self._common_display_spec.reference: return
         stage=state.get("stage","Connecting")
         text=f"Test {state.get('test_reference','')} - {state.get('mode','').title()} ({'PID Automatic' if state.get('control_method')=='pid' else 'Recorded Replay'}): {stage}"
+        if state.get("simulation_mode"):
+            text="SIMULATION ONLY - NOT FOR QTG QUALIFICATION\n"+text
         if state.get("details"): text+="\n"+state["details"]
         if state.get("evaluation_result"): text+="\nValidation: "+state["evaluation_result"]
         text=text.replace("Prepar3D","Sim Flight Model").replace("P3D","Sim Flight Model").replace("BRUNNER","CLS2sim").replace("Brunner","CLS2sim")
-        self.common_status.configure(text=text,fg=COL["red"] if stage in ("Automatic blocked","Connection error") else COL["blue"])
+        status_color = COL["red"] if stage in ("Automatic blocked","Connection error") or state.get("simulation_mode") else COL["blue"]
+        self.common_status.configure(text=text,fg=status_color)
         mapping={"throttle":"throttle_text","engine":"engine_text","flight":"flight_text","attitude":"attitude_text",
                  "controls":"controls_text","recording":"recording_text","progress":"progress_text"}
         self._common_view_vars["connection"].set(f"Sim Flight Model {'Connected' if state.get('connected') else 'Disconnected'} | CLS2sim Connection: {'Connected' if state.get('brunner_connected') else 'Disconnected'}")
