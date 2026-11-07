@@ -512,7 +512,7 @@ class SuperMushakLoggerApp(QMainWindow):
             self.btn_auto_test.setVisible(False)
             self.btn_record.setVisible(False)
             self.btn_stop.setEnabled(True)
-            self.lbl_rec_status.setText(f"RECORDING TELEMETRY ({self.test_mode.upper()} MODE) @ 50 Hz")
+            self.lbl_rec_status.setText(details or f"RECORDING TELEMETRY ({self.test_mode.upper()} MODE) @ 50 Hz")
             self.lbl_rec_status.setStyleSheet("color: #f38ba8;")
 
     # =====================================================================
@@ -1581,11 +1581,21 @@ class SuperMushakLoggerApp(QMainWindow):
         t0 = time.perf_counter()
         next_tick = 0.0
         sec_counter = 0
+        decel_prompt_sent = False
+        is_ground_deceleration = (
+            getattr(self, "_session_context", {}).get("test_reference") == "1.f.(2)"
+        )
 
         while not self.stop_worker_event.is_set():
             now = time.perf_counter() - t0
             if now >= self.target_duration_sec:
                 break
+            if is_ground_deceleration and not decel_prompt_sent and now >= 5.0:
+                self.sig_update_stage.emit(
+                    STAGE_RECORDING,
+                    "5-second full-power baseline complete — move the physical throttle rapidly to IDLE now."
+                )
+                decel_prompt_sent = True
 
             # 1. Read Brunner Controls exclusively via UDP 15090
             pp, pf, pvf = self.brunner.read_axis(self.brunner.AXIS_PITCH)
