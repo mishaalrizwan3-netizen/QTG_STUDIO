@@ -111,7 +111,7 @@ def apply_manual_conditions(window,values):
     # Apply them after position readback, then wait for fresh telemetry; never drive it in flight.
     if not sim.set_initial_throttle(cfg['throttle']):raise RuntimeError('Initial throttle rejected.')
     if not sim.set_initial_flaps(cfg['flaps']):raise RuntimeError('Initial flaps rejected.')
-    checks=[('pressure_alt',cfg['alt_ft'],25),('plane_latitude',cfg['lat'],.001),('plane_longitude',cfg['lon'],.001),('measured_flaps_handle_index',cfg['flaps'],.1),('engine_throttle_percent',cfg['throttle'],1)]
+    checks=[('pressure_alt',cfg['alt_ft'],25),('airspeed_indicated',cfg['ias_kt'],2.),('plane_latitude',cfg['lat'],.001),('plane_longitude',cfg['lon'],.001),('measured_flaps_handle_index',cfg['flaps'],.1),('engine_throttle_percent',cfg['throttle'],1)]
     deadline=time.monotonic()+3.
     while True:
         if window.stop_worker_event.is_set():raise RuntimeError('Manual initialization cancelled.')
@@ -123,15 +123,17 @@ def apply_manual_conditions(window,values):
                 mismatches.append(f'{key}: requested {target:g}, actual {measured:g}')
         # Ground engine-deceleration references must be stationary with the
         # parking brake confirmed engaged; never infer brake state from UI settings.
+        ground_state=float(actual.get('sim_on_ground',float('nan')))
+        if not math.isfinite(ground_state):
+            mismatches.append('sim_on_ground: telemetry unavailable')
+        elif cfg['on_ground'] and ground_state<.5:
+            mismatches.append(f'sim_on_ground: ground test requires on-ground state (actual {ground_state:g})')
+        elif not cfg['on_ground'] and ground_state>=.5:
+            mismatches.append(f'sim_on_ground: airborne test requires off-ground state (actual {ground_state:g})')
         if cfg['on_ground']:
-            for key,target,tolerance in (
-                ('sim_on_ground',1.0,.5),
-                ('ground_speed',0.0,.5),
-                ('airspeed_indicated',0.0,2.0),
-            ):
-                measured=float(actual.get(key,float('nan')))
-                if not math.isfinite(measured) or abs(measured-target)>tolerance:
-                    mismatches.append(f'{key}: required {target:g} ± {tolerance:g}, actual {measured:g}')
+            ground_speed=float(actual.get('ground_speed',float('nan')))
+            if not math.isfinite(ground_speed) or abs(ground_speed)>.5:
+                mismatches.append(f'ground_speed: ground test requires stationary aircraft, actual {ground_speed:g} kt')
             brake=float(actual.get('parking_brake_position',float('nan')))
             if not math.isfinite(brake):
                 mismatches.append('parking_brake_position: telemetry unavailable')
