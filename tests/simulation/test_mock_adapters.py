@@ -20,6 +20,15 @@ class MockAdapterTests(unittest.TestCase):
         self.assertEqual(state["sim_on_ground"], 1.0)
         self.assertAlmostEqual(state["indicated_altitude"], 755.0)
 
+    def test_position_airborne_matches_real_client_signature(self):
+        sim = MockP3D()
+        self.assertTrue(sim.set_position_airborne(
+            2000, 80, 1.0, 2.0, 48.4, 32.235, 74.135, 35.0))
+        state = sim.get_telemetry()
+        self.assertAlmostEqual(state["indicated_altitude"], 2000.0)
+        self.assertAlmostEqual(state["airspeed_indicated"], 80.0)
+        self.assertEqual(state["sim_on_ground"], 0.0)
+
     def test_paused_telemetry_request_does_not_advance_engine(self):
         sim = MockP3D()
         sim.connect()
