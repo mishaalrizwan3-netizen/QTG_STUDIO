@@ -3197,7 +3197,7 @@ class App(tk.Tk):
             self._test_settings[spec.reference] = (
                 {key: tk.StringVar(value=value) for key, value in defaults.items()},
                 g_list)
-            spec.pdf_graphs = [(label, column) for label, column in channels]
+            spec.pdf_graphs = [(label, column) for label, column, var in g_list if var.get()]
             def _make_sync(s=spec, gl=g_list):
                 def _do_sync(*_):
                     s.pdf_graphs = [(lbl, col) for lbl, col, v in gl if v.get()]
