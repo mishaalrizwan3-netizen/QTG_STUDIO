@@ -162,6 +162,42 @@ class MockAdapterTests(unittest.TestCase):
         self.assertIn("engine_cylinder_head_temperature_c_1", support)
         self.assertIn("engine_carburetor_temperature_c_1", support)
 
+    def test_restore_engine_thermal_state_does_not_overwrite_rpm_or_controls(self):
+        sim = MockP3D()
+        sim._state["engine_rpm"] = 600.6
+        sim._state["eng_rpms"][0] = 600.6
+        sim._state["prop_rpms"][0] = 600.6
+        sim._state["engine_throttle_percent"] = 5.0
+        sim._state["throttle1"] = 5.0
+        sim._state["throttle"] = 5.0
+        sim._state["throttles"][0] = 5.0
+        sim._throttle_target = 5.0
+        sim._rpm_target = 600.6
+
+        manual_snapshot = {
+            "engine_rpm": 2700.0,
+            "eng_rpms": [2700.0, 0.0, 0.0, 0.0],
+            "prop_rpms": [2700.0, 0.0, 0.0, 0.0],
+            "engine_throttle_percent": 100.0,
+            "throttle1": 100.0,
+            "throttle": 100.0,
+            "throttles": [100.0, 0.0, 0.0, 0.0],
+            "engine_oil_temperature_c_1": 82.0,
+            "engine_cylinder_head_temperature_c_1": 165.0,
+            "engine_carburetor_temperature_c_1": 21.0,
+        }
+        sim.restore_engine_thermal_state(manual_snapshot)
+        actual = sim.get_telemetry()
+
+        self.assertAlmostEqual(actual["engine_rpm"], 600.6)
+        self.assertAlmostEqual(actual["eng_rpms"][0], 600.6)
+        self.assertAlmostEqual(actual["prop_rpms"][0], 600.6)
+        self.assertAlmostEqual(actual["engine_throttle_percent"], 5.0)
+        self.assertAlmostEqual(actual["throttles"][0], 5.0)
+        self.assertAlmostEqual(actual["engine_oil_temperature_c_1"], 82.0)
+        self.assertAlmostEqual(actual["engine_cylinder_head_temperature_c_1"], 165.0)
+        self.assertAlmostEqual(actual["engine_carburetor_temperature_c_1"], 21.0)
+
     def test_paused_telemetry_request_does_not_advance_engine(self):
         sim = MockP3D()
         sim.connect()
