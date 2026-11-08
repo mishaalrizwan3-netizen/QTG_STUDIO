@@ -198,6 +198,28 @@ class MockAdapterTests(unittest.TestCase):
         self.assertAlmostEqual(actual["engine_cylinder_head_temperature_c_1"], 165.0)
         self.assertAlmostEqual(actual["engine_carburetor_temperature_c_1"], 21.0)
 
+    def test_restore_engine_startup_rpm_synchronizes_recorded_direct_drive_rpm(self):
+        sim = MockP3D()
+        sim._state["engine_rpm"] = 600.6
+        sim._state["eng_rpms"][0] = 600.6
+        sim._state["prop_rpms"][0] = 600.6
+        sim._rpm_target = 600.6
+
+        self.assertTrue(sim.restore_engine_startup_rpm({
+            "engine_rpm": 2696.0,
+            "prop_rpms": [2696.0, 0.0, 0.0, 0.0],
+        }))
+        actual = sim.get_telemetry()
+        self.assertAlmostEqual(actual["engine_rpm"], 2696.0)
+        self.assertAlmostEqual(actual["eng_rpms"][0], 2696.0)
+        self.assertAlmostEqual(actual["prop_rpms"][0], 2696.0)
+        self.assertAlmostEqual(sim._rpm_target, 2696.0)
+
+        self.assertFalse(sim.restore_engine_startup_rpm({
+            "engine_rpm": 2696.0,
+            "prop_rpms": [600.6, 0.0, 0.0, 0.0],
+        }))
+
     def test_paused_telemetry_request_does_not_advance_engine(self):
         sim = MockP3D()
         sim.connect()
