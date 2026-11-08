@@ -11,6 +11,7 @@ class MockAdapterTests(unittest.TestCase):
             "airspeed_indicated": 0.0,
             "sim_on_ground": 1.0,
             "ground_speed": 0.0,
+            "parking_brake_position": 1.0,
         }
         self.assertEqual(validate_initial_airspeed(
             stationary, 0.0, on_ground=True), 0.0)
