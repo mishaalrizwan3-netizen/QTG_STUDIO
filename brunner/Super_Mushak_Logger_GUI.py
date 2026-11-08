@@ -1103,6 +1103,13 @@ class SuperMushakLoggerApp(QMainWindow):
                 raise RuntimeError("Prepar3D rejected recorded mixture/propeller initialization.")
             print(f"[Auto Prep] Restoring recorded engine levers: mixture={mixture}%, propeller={propeller}% (paused initialization only).", flush=True)
         thermal = sim.restore_engine_thermal_state(state)
+        # Offline simulation has no live engine model to reach the recorded
+        # transient RPM while paused. Seed its RPM channels coherently; the
+        # real Prepar3D client does not expose this mock-only method.
+        if getattr(self, '_session_context', {}).get('test_reference') in ('1.f.(1)', '1.f.(2)'):
+            restore_mock_rpm = getattr(sim, 'restore_engine_startup_rpm', None)
+            if callable(restore_mock_rpm) and not restore_mock_rpm(state):
+                raise RuntimeError('Simulation mock could not restore the recorded engine/prop RPM.')
         deadline = time.monotonic() + 3.0
         while True:
             fresh = self._refresh_paused_telemetry()
