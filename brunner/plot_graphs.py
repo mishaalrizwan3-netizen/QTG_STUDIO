@@ -675,7 +675,71 @@ def _initial_page(pdf, mode, source_path, sim_df, ref_df=None):
 
 
 
-def _manual_report(csv_path, out_path):
+
+BRUNNER_CONTROL_GRAPH_KEYS = {
+    "pitch_position", "pitch_force",
+    "roll_position", "roll_force",
+    "rudder_position", "rudder_force",
+}
+
+
+def _append_control_pages(pdf, sim_df, sim_time, selected_graphs=None,
+                          manual_df=None, manual_time=None):
+    """Render selected BRUNNER graphs; recording itself is never filtered."""
+    selected = (
+        set(BRUNNER_CONTROL_GRAPH_KEYS)
+        if selected_graphs is None
+        else {str(item) for item in selected_graphs} & BRUNNER_CONTROL_GRAPH_KEYS
+    )
+    groups = [
+        ("Group 4 (BRUNNER Pitch and Roll)", [
+            ("pitch_position", "Joystick Pitch Position (mm)", "position", "Pitch"),
+            ("pitch_force", "Pitch Applied / Virtual Force (N)", "force", "Pitch"),
+            ("roll_position", "Joystick Roll Position (mm)", "position", "Roll"),
+            ("roll_force", "Roll Applied / Virtual Force (N)", "force", "Roll"),
+        ]),
+        ("Group 5 (BRUNNER Rudder)", [
+            ("rudder_position", "Rudder Pedal Position (mm)", "position", "Yaw"),
+            ("rudder_force", "Yaw Applied / Virtual Force (N)", "force", "Yaw"),
+        ]),
+    ]
+
+    for title, definitions in groups:
+        chosen = [item for item in definitions if item[0] in selected]
+        if not chosen:
+            continue
+        fig, axes = plt.subplots(
+            len(chosen), 1, figsize=(8.27, 11.69), constrained_layout=True
+        )
+        axes = np.atleast_1d(axes).ravel()
+        fig.suptitle(title, fontsize=15, fontweight="bold")
+
+        for ax, (key, label, kind, axis_name) in zip(axes, chosen):
+            if kind == "position":
+                column = "Rudder Pedal Position (mm)" if axis_name == "Yaw" else f"Joystick {axis_name} Position (mm)"
+                y_sim = _series(sim_df, column)
+                y_ref = _series(manual_df, column) if manual_df is not None else None
+            else:
+                y_sim = (
+                    _automatic_virtual_force_inverted(sim_df, axis_name)
+                    if manual_df is not None
+                    else _manual_applied_force(sim_df, axis_name)
+                )
+                y_ref = _manual_applied_force(manual_df, axis_name) if manual_df is not None else None
+
+            if manual_df is not None and y_ref is not None:
+                _plot_auto(
+                    ax, manual_time, y_ref, sim_time, y_sim, label,
+                    manual_label="Manual Test (Reference)",
+                    auto_label="Automatic Test (Sim)",
+                )
+            else:
+                _plot_manual(ax, sim_time, y_sim, label)
+        pdf.savefig(fig)
+        plt.close(fig)
+
+
+def _manual_report(csv_path, out_path, selected_graphs=None):
 
     df = _read_csv(csv_path)
 
@@ -743,35 +807,10 @@ def _manual_report(csv_path, out_path):
 
 
 
-        fig,axes=plt.subplots(4,1,figsize=(8.27,11.69),constrained_layout=True)
-
-        fig.suptitle("1st Quadrant Combined Group 4 (Joystick Position & Applied Force)",fontsize=15,fontweight="bold")
-
-        _plot_manual(axes[0],t,_series(df,"Joystick Pitch Position (mm)"),"Joystick Pitch Position\n(mm)")
-
-        _plot_manual(axes[1],t,_manual_applied_force(df,"Pitch"),"Pitch Applied Force 0x21\n(N)")
-
-        _plot_manual(axes[2],t,_series(df,"Joystick Roll Position (mm)"),"Joystick Roll Position\n(mm)")
-
-        _plot_manual(axes[3],t,_manual_applied_force(df,"Roll"),"Roll Applied Force 0x21\n(N)")
-
-        pdf.savefig(fig); plt.close(fig)
+        _append_control_pages(pdf, df, t, selected_graphs=selected_graphs)
 
 
-
-        fig,axes=plt.subplots(2,1,figsize=(8.27,11.69),constrained_layout=True)
-
-        fig.suptitle("1st Quadrant Combined Group 5 (Rudder Position & Applied Force)",fontsize=15,fontweight="bold")
-
-        _plot_manual(axes[0],t,_series(df,"Rudder Pedal Position (mm)"),"Rudder Pedal Position\n(mm)")
-
-        _plot_manual(axes[1],t,_manual_applied_force(df,"Yaw"),"Yaw Applied Force 0x21\n(N)")
-
-        pdf.savefig(fig); plt.close(fig)
-
-
-
-def _auto_report(auto_path, manual_path, out_path):
+def _auto_report(auto_path, manual_path, out_path, selected_graphs=None):
 
     a=_read_csv(auto_path); m=_read_csv(manual_path)
 
@@ -847,93 +886,7 @@ def _auto_report(auto_path, manual_path, out_path):
 
 
 
-        fig,axes=plt.subplots(4,1,figsize=(8.27,11.69),constrained_layout=True)
-
-        fig.suptitle("1st Quadrant Combined Group 4 (Position + Manual Applied Force vs Inverted Automatic Virtual Force)",fontsize=13.5,fontweight="bold")
-
-        _plot_auto(
-
-            axes[0],tm,_series(m,"Joystick Pitch Position (mm)"),
-
-            ta,_series(a,"Joystick Pitch Position (mm)"),
-
-            "Joystick Pitch Position\n(mm)"
-
-        )
-
-        _plot_auto(
-
-            axes[1],tm,_manual_applied_force(m,"Pitch"),
-
-            ta,_automatic_virtual_force_inverted(a,"Pitch"),
-
-            "Pitch: Manual Applied Force\nvs Automatic Virtual Force (inverted) (N)",
-
-            manual_label="Manual Applied Force (Reference)",
-
-            auto_label="Automatic Virtual Force (Sim)"
-
-        )
-
-        _plot_auto(
-
-            axes[2],tm,_series(m,"Joystick Roll Position (mm)"),
-
-            ta,_series(a,"Joystick Roll Position (mm)"),
-
-            "Joystick Roll Position\n(mm)"
-
-        )
-
-        _plot_auto(
-
-            axes[3],tm,_manual_applied_force(m,"Roll"),
-
-            ta,_automatic_virtual_force_inverted(a,"Roll"),
-
-            "Roll: Manual Applied Force\nvs Automatic Virtual Force (inverted) (N)",
-
-            manual_label="Manual Applied Force (Reference)",
-
-            auto_label="Automatic Virtual Force (Sim)"
-
-        )
-
-        pdf.savefig(fig); plt.close(fig)
-
-
-
-        fig,axes=plt.subplots(2,1,figsize=(8.27,11.69),constrained_layout=True)
-
-        fig.suptitle("1st Quadrant Combined Group 5 (Rudder Position + Manual Applied Force vs Inverted Automatic Virtual Force)",fontsize=13.5,fontweight="bold")
-
-        _plot_auto(
-
-            axes[0],tm,_series(m,"Rudder Pedal Position (mm)"),
-
-            ta,_series(a,"Rudder Pedal Position (mm)"),
-
-            "Rudder Pedal Position\n(mm)"
-
-        )
-
-        _plot_auto(
-
-            axes[1],tm,_manual_applied_force(m,"Yaw"),
-
-            ta,_automatic_virtual_force_inverted(a,"Yaw"),
-
-            "Yaw: Manual Applied Force\nvs Automatic Virtual Force (inverted) (N)",
-
-            manual_label="Manual Applied Force (Reference)",
-
-            auto_label="Automatic Virtual Force (Sim)"
-
-        )
-
-        pdf.savefig(fig); plt.close(fig)
-
-
+        _append_control_pages(pdf, a, ta, selected_graphs=selected_graphs, manual_df=m, manual_time=tm)
 
 
 def _is_engine_test(csv_path, kwargs):
@@ -973,7 +926,7 @@ def plot_aligned_comparison(csv_path, manual_csv_path=None, output_pdf_path=None
 
     if "manual" in csv_path.name.lower():
 
-        _manual_report(csv_path, out_path)
+        _manual_report(csv_path, out_path, selected_graphs=kwargs.get('selected_graphs'))
 
         return str(out_path)
 
@@ -987,7 +940,7 @@ def plot_aligned_comparison(csv_path, manual_csv_path=None, output_pdf_path=None
 
         raise FileNotFoundError("No Manual reference CSV found for Automatic report.")
 
-    _auto_report(csv_path, manual_path, out_path)
+    _auto_report(csv_path, manual_path, out_path, selected_graphs=kwargs.get('selected_graphs'))
 
     return str(out_path)
 
