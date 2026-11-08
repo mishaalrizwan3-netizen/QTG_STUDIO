@@ -691,17 +691,28 @@ def _append_control_pages(pdf, sim_df, sim_time, selected_graphs=None,
         if selected_graphs is None
         else {str(item) for item in selected_graphs} & BRUNNER_CONTROL_GRAPH_KEYS
     )
+    is_auto = manual_df is not None
     groups = [
-        ("Group 4 (BRUNNER Pitch and Roll)", [
-            ("pitch_position", "Joystick Pitch Position (mm)", "position", "Pitch"),
-            ("pitch_force", "Pitch Applied / Virtual Force (N)", "force", "Pitch"),
-            ("roll_position", "Joystick Roll Position (mm)", "position", "Roll"),
-            ("roll_force", "Roll Applied / Virtual Force (N)", "force", "Roll"),
-        ]),
-        ("Group 5 (BRUNNER Rudder)", [
-            ("rudder_position", "Rudder Pedal Position (mm)", "position", "Yaw"),
-            ("rudder_force", "Yaw Applied / Virtual Force (N)", "force", "Yaw"),
-        ]),
+        (
+            "1st Quadrant Combined Group 4 (Position + Manual Applied Force vs Inverted Automatic Virtual Force)"
+            if is_auto else
+            "1st Quadrant Combined Group 4 (Joystick Position & Applied Force)",
+            [
+                ("pitch_position", "Joystick Pitch Position\n(mm)", "position", "Pitch"),
+                ("pitch_force", "Pitch: Manual Applied Force\nvs Automatic Virtual Force (inverted) (N)" if is_auto else "Pitch Applied Force 0x21\n(N)", "force", "Pitch"),
+                ("roll_position", "Joystick Roll Position\n(mm)", "position", "Roll"),
+                ("roll_force", "Roll: Manual Applied Force\nvs Automatic Virtual Force (inverted) (N)" if is_auto else "Roll Applied Force 0x21\n(N)", "force", "Roll"),
+            ],
+        ),
+        (
+            "1st Quadrant Combined Group 5 (Rudder Position + Manual Applied Force vs Inverted Automatic Virtual Force)"
+            if is_auto else
+            "1st Quadrant Combined Group 5 (Rudder Position & Applied Force)",
+            [
+                ("rudder_position", "Rudder Pedal Position\n(mm)", "position", "Yaw"),
+                ("rudder_force", "Yaw: Manual Applied Force\nvs Automatic Virtual Force (inverted) (N)" if is_auto else "Yaw Applied Force 0x21\n(N)", "force", "Yaw"),
+            ],
+        ),
     ]
 
     for title, definitions in groups:
@@ -712,27 +723,30 @@ def _append_control_pages(pdf, sim_df, sim_time, selected_graphs=None,
             len(chosen), 1, figsize=(8.27, 11.69), constrained_layout=True
         )
         axes = np.atleast_1d(axes).ravel()
-        fig.suptitle(title, fontsize=15, fontweight="bold")
+        fig.suptitle(title, fontsize=13.5 if is_auto else 15, fontweight="bold")
 
         for ax, (key, label, kind, axis_name) in zip(axes, chosen):
             if kind == "position":
                 column = "Rudder Pedal Position (mm)" if axis_name == "Yaw" else f"Joystick {axis_name} Position (mm)"
                 y_sim = _series(sim_df, column)
-                y_ref = _series(manual_df, column) if manual_df is not None else None
+                y_ref = _series(manual_df, column) if is_auto else None
             else:
                 y_sim = (
                     _automatic_virtual_force_inverted(sim_df, axis_name)
-                    if manual_df is not None
+                    if is_auto
                     else _manual_applied_force(sim_df, axis_name)
                 )
-                y_ref = _manual_applied_force(manual_df, axis_name) if manual_df is not None else None
+                y_ref = _manual_applied_force(manual_df, axis_name) if is_auto else None
 
-            if manual_df is not None and y_ref is not None:
-                _plot_auto(
-                    ax, manual_time, y_ref, sim_time, y_sim, label,
-                    manual_label="Manual Test (Reference)",
-                    auto_label="Automatic Test (Sim)",
-                )
+            if is_auto:
+                if kind == "force":
+                    _plot_auto(
+                        ax, manual_time, y_ref, sim_time, y_sim, label,
+                        manual_label="Manual Applied Force (Reference)",
+                        auto_label="Automatic Virtual Force (Sim)",
+                    )
+                else:
+                    _plot_auto(ax, manual_time, y_ref, sim_time, y_sim, label)
             else:
                 _plot_manual(ax, sim_time, y_sim, label)
         pdf.savefig(fig)
