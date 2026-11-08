@@ -3175,11 +3175,29 @@ class App(tk.Tk):
                 self._test_defaults = {}
             self._test_defaults[spec.reference] = dict(defaults)
             channels = PDF_CHANNELS
-            g_list = [(label, column, tk.BooleanVar(value=True)) for label, column in channels]
+            # Engine reports keep their existing default layout. BRUNNER control
+            # channels are still captured in every recording; these six options
+            # only add their graphs to the PDF when the user explicitly selects them.
+            brunner_control_channels = {
+                "pitch_position", "pitch_force",
+                "roll_position", "roll_force",
+                "rudder_position", "rudder_force",
+            }
+            is_engine_test = spec.reference in ("1.f.(1)", "1.f.(2)")
+            g_list = [
+                (
+                    label,
+                    column,
+                    tk.BooleanVar(
+                        value=not (is_engine_test and column in brunner_control_channels)
+                    ),
+                )
+                for label, column in channels
+            ]
             self._test_settings[spec.reference] = (
                 {key: tk.StringVar(value=value) for key, value in defaults.items()},
                 g_list)
-            spec.pdf_graphs = [(label, column) for label, column in channels]
+            spec.pdf_graphs = [(label, column) for label, column, var in g_list if var.get()]
             def _make_sync(s=spec, gl=g_list):
                 def _do_sync(*_):
                     s.pdf_graphs = [(lbl, col) for lbl, col, v in gl if v.get()]
@@ -3253,6 +3271,12 @@ class App(tk.Tk):
         ttk.Button(box, text="Set initial conditions",
                    command=lambda: self._fly_to_initial_conditions(spec, status_label=status)).pack(fill="x", pady=(4, 10))
         self._label(box, "Graphs in PDF", 10, COL["text"], "bold").pack(anchor="w", pady=(10, 4))
+        self._label(
+            box,
+            "BRUNNER pitch, roll and rudder telemetry is always recorded in the CSV. "
+            "These selections only control which graphs appear in the PDF.",
+            8, COL["dim"], wraplength=235, justify="left"
+        ).pack(fill="x", pady=(0, 6))
         buttons = tk.Frame(box, bg="#FFFFFF")
         buttons.pack(fill="x")
 
