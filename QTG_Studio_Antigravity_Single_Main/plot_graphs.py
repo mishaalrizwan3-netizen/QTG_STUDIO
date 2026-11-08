@@ -515,7 +515,89 @@ def _brunner_tracking_check(auto_path):
     except (OSError, ValueError, KeyError):
         return None
 
-def _render_report(sim_path, ref_path=None, out_path="report.pdf", titt_results=None, metadata=None):
+
+def _append_control_graph_pages(pdf, sim_df, ref_df, t_sim, t_ref, is_auto,
+                                min_x, max_x, selected_graphs):
+    """Append only the BRUNNER control graphs explicitly selected for the PDF."""
+    selected = {str(item) for item in (selected_graphs or [])}
+    groups = [
+        ("Group 4 - BRUNNER Pitch and Roll", [
+            ("pitch_position", "Joystick Pitch Position (mm)", "position", "Pitch"),
+            ("pitch_force", "Pitch Applied / Virtual Force (N)", "force", "Pitch"),
+            ("roll_position", "Joystick Roll Position (mm)", "position", "Roll"),
+            ("roll_force", "Roll Applied / Virtual Force (N)", "force", "Roll"),
+        ]),
+        ("Group 5 - BRUNNER Rudder", [
+            ("rudder_position", "Rudder Pedal Position (mm)", "position", "Yaw"),
+            ("rudder_force", "Rudder Applied / Virtual Force (N)", "force", "Yaw"),
+        ]),
+    ]
+
+    for title, definitions in groups:
+        chosen = [item for item in definitions if item[0] in selected]
+        if not chosen:
+            continue
+
+        fig, axes = plt.subplots(
+            len(chosen), 1, figsize=(8.27, 11.69), squeeze=False
+        )
+        axes = list(axes[:, 0])
+        fig.subplots_adjust(left=0.14, right=0.96, top=0.93, bottom=0.07, hspace=0.48)
+        fig.suptitle(title, fontsize=14, fontweight="bold")
+
+        for ax, (key, label, channel_kind, axis_name) in zip(axes, chosen):
+            if channel_kind == "force":
+                y_sim = (
+                    _automatic_virtual_force_inverted(sim_df, axis_name)
+                    if is_auto else _manual_applied_force(sim_df, axis_name)
+                )
+                y_ref = _manual_applied_force(ref_df, axis_name) if is_auto and ref_df is not None else None
+            else:
+                y_sim = _series(sim_df, key)
+                y_ref = _series(ref_df, key) if is_auto and ref_df is not None else None
+
+            has_data = False
+            if y_ref is not None and np.isfinite(y_ref).any():
+                valid_ref = np.isfinite(t_ref) & np.isfinite(y_ref)
+                ax.plot(
+                    t_ref[valid_ref], y_ref[valid_ref], color="green",
+                    linewidth=2.0, label="Manual Test (Reference)",
+                )
+                has_data = True
+            if np.isfinite(y_sim).any():
+                valid_sim = np.isfinite(t_sim) & np.isfinite(y_sim)
+                ax.plot(
+                    t_sim[valid_sim], y_sim[valid_sim], color="#0066cc",
+                    linewidth=1.7, linestyle="--" if is_auto else "-",
+                    marker="o" if is_auto else None,
+                    markevery=max(1, int(round(len(t_sim[valid_sim]) / 10))) if is_auto else None,
+                    markersize=4 if is_auto else None,
+                    label="Automatic Test (Sim)" if is_auto else "Manual Test",
+                )
+                has_data = True
+
+            ax.set_title(label, fontsize=10, fontweight="bold")
+            ax.set_xlabel("Seconds from throttle movement")
+            ax.set_ylabel("mm" if channel_kind == "position" else "N")
+            ax.set_xlim(min_x, max_x)
+            ax.axvline(0, color="gray", linestyle=":", linewidth=1.0)
+            ax.minorticks_on()
+            ax.grid(True, which="major", alpha=0.45, linewidth=0.7)
+            ax.grid(True, which="minor", alpha=0.20, linewidth=0.45)
+            if has_data:
+                ax.legend(loc="best", fontsize=8, framealpha=0.95)
+            else:
+                ax.text(
+                    0.5, 0.5, "BRUNNER control telemetry unavailable",
+                    ha="center", va="center", transform=ax.transAxes,
+                    fontsize=9, color="gray",
+                )
+
+        pdf.savefig(fig)
+        plt.close(fig)
+
+
+def _render_report(sim_path, ref_path=None, out_path="report.pdf", titt_results=None, metadata=None, selected_graphs=None):
     is_auto = ref_path is not None
     sim_df = _load_engine_dataframe(sim_path)
     ref_df = _load_engine_dataframe(ref_path) if is_auto else None
@@ -691,6 +773,13 @@ def _render_report(sim_path, ref_path=None, out_path="report.pdf", titt_results=
             pdf.savefig(fig)
             plt.close(fig)
 
+        # BRUNNER control graphs are optional PDF content. The logger records
+        # these channels in the CSV regardless of this selection.
+        _append_control_graph_pages(
+            pdf, sim_df, ref_df, t_sim, t_ref, is_auto, min_x, max_x,
+            selected_graphs,
+        )
+
         # Page 5: Ti/Tt Response Time Assessment (when available)
         if titt_results is None:
             try:
@@ -730,14 +819,14 @@ def plot_aligned_comparison(csv_path, manual_csv_path=None, titt_results=None, m
         metadata.setdefault("kind", "acceleration")
 
     if "manual" in csv_path.name.lower() and manual_csv_path is None:
-        _render_report(csv_path, ref_path=None, out_path=out_path, titt_results=titt_results, metadata=metadata)
+        _render_report(csv_path, ref_path=None, out_path=out_path, titt_results=titt_results, metadata=metadata, selected_graphs=kwargs.get("selected_graphs"))
         return str(out_path)
 
     manual_path = Path(manual_csv_path) if manual_csv_path else _find_manual_for_auto(csv_path)
     if manual_path is None or not manual_path.exists():
         print("[Engine Report] No manual reference found, rendering single-run report.")
-        _render_report(csv_path, ref_path=None, out_path=out_path, titt_results=titt_results, metadata=metadata)
+        _render_report(csv_path, ref_path=None, out_path=out_path, titt_results=titt_results, metadata=metadata, selected_graphs=kwargs.get("selected_graphs"))
         return str(out_path)
 
-    _render_report(csv_path, ref_path=manual_path, out_path=out_path, titt_results=titt_results, metadata=metadata)
+    _render_report(csv_path, ref_path=manual_path, out_path=out_path, titt_results=titt_results, metadata=metadata, selected_graphs=kwargs.get("selected_graphs"))
     return str(out_path)
