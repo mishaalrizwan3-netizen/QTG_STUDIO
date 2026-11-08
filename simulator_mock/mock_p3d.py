@@ -336,6 +336,27 @@ class MockP3D:
             self._sequence += 1
         return self.get_engine_support_state()
 
+    def restore_engine_startup_rpm(self, state):
+        """Seed recorded RPM coherently in offline simulation mode only."""
+        recorded = dict(state or {})
+        try:
+            engine_rpm = float(recorded["engine_rpm"])
+            prop_values = recorded.get("prop_rpms") or [engine_rpm]
+            prop_rpm = float(prop_values[0])
+        except (KeyError, TypeError, ValueError, IndexError):
+            return False
+        if (not all(math.isfinite(value) and 300.0 <= value <= 4000.0
+                    for value in (engine_rpm, prop_rpm))
+                or abs(engine_rpm - prop_rpm) > 10.0):
+            return False
+        with self._lock:
+            self._rpm_target = engine_rpm
+            self._state["engine_rpm"] = engine_rpm
+            self._state["eng_rpms"][0] = engine_rpm
+            self._state["prop_rpms"][0] = prop_rpm
+            self._sequence += 1
+        return True
+
     def set_initial_fuel_pressure(self, *args, **kwargs):
         return True
 
