@@ -319,10 +319,20 @@ class MockP3D:
         }
 
     def restore_engine_thermal_state(self, state, timeout=3.0):
+        """Restore only recorded engine temperatures, never aircraft dynamics."""
+        thermal_keys = (
+            "engine_oil_temperature_c_1",
+            "engine_cylinder_head_temperature_c_1",
+            "engine_carburetor_temperature_c_1",
+        )
+        recorded = dict(state or {})
+        thermal_values = {}
+        for key in thermal_keys:
+            value = recorded.get(key)
+            if isinstance(value, (int, float)) and math.isfinite(float(value)):
+                thermal_values[key] = float(value)
         with self._lock:
-            for key, value in dict(state or {}).items():
-                if isinstance(value, (int, float)) and math.isfinite(float(value)):
-                    self._state[key] = float(value)
+            self._state.update(thermal_values)
             self._sequence += 1
         return self.get_engine_support_state()
 
