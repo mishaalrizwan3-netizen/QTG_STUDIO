@@ -1,2 +1,0 @@
-python-interpreter-path = ".venv/Scripts/python.exe"
-search-path = [".", "src", "src/single_axis"]

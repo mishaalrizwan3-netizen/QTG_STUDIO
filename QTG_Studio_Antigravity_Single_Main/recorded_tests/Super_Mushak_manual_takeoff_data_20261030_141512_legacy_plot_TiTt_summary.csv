@@ -1,2 +1,0 @@
-Run,Mode,Parameter,Throttle_onset_s,Ti_s,Tt_s,Status,Warnings
-Manual,acceleration,map,,,,INVALID,"INSUFFICIENT TEMPORAL RESOLUTION: largest gap 0.839s, median interval 0.510s. Use the high-rate *_engine_channels.csv export.; Throttle sweep too small/wrong direction: 0.00 percentage points; No throttle movement onset detectable"

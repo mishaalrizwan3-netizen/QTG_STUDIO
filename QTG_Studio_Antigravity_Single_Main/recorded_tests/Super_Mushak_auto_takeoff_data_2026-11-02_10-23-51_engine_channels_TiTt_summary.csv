@@ -1,3 +1,0 @@
-Run,Mode,Parameter,Throttle_onset_s,Ti_s,Tt_s,Status,Warnings
-Manual,acceleration,map,,,,INVALID,Throttle sweep too small/wrong direction: -95.00 percentage points; No throttle movement onset detectable
-Automatic,acceleration,map,,,,INVALID,Throttle sweep too small/wrong direction: -94.99 percentage points; No throttle movement onset detectable

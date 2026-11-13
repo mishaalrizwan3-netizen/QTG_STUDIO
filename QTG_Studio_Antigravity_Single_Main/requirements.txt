@@ -1,2 +1,0 @@
-# GUI: Python 3.10+ standard library (tkinter); no pip installs needed.
-# Optional Windows EXE: py -3 -m pip install pyinstaller
