@@ -1,0 +1,1 @@
+"""Visible QTG Studio application."""

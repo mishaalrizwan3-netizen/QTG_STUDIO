@@ -1,0 +1,13 @@
+{
+  "reference": "2.c.(2)",
+  "title": "Spiral stability",
+  "category": "Lateral-Directional Handling",
+  "availability": "SEP catalog test",
+  "objective": "To demonstrate that the simulation of the dynamic lateral/directional characteristics in the spiral mode conform to the validation data.",
+  "initial_conditions_catalog": "",
+  "tolerance_catalog": "Correct spiral tendency (positive, neutral or correct divergence rate) | ± 10% or ± 1 s time to double/half bank angle",
+  "reference_pdf_page": "75",
+  "definition_source": "QTG_Studio_Antigravity_Single_Main/test_catalog.csv",
+  "runtime_configuration": "Existing main.py test settings and common engine remain authoritative",
+  "results_directory": "D:/QTG_Test_Results/2_c_2_Spiral_stability"
+}

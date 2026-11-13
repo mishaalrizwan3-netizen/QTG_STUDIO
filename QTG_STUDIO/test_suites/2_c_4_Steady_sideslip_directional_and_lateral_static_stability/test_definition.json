@@ -1,0 +1,13 @@
+{
+  "reference": "2.c.(4)",
+  "title": "Steady sideslip (directional and lateral static stability)",
+  "category": "Lateral-Directional Handling",
+  "availability": "SEP catalog test",
+  "objective": "To demonstrate that the simulator exhibits the correct inter-relationship of steady state lateral/directional flight characteristics in conformance with the validation data.",
+  "initial_conditions_catalog": "",
+  "tolerance_catalog": "± 1.5º sideslip angle (beta) | ± 1.5 cm (0.6 in) or ± 10% rudder position | ± 1.5 cm or ± 10% wheel position | ± 2º bank angle",
+  "reference_pdf_page": "76",
+  "definition_source": "QTG_Studio_Antigravity_Single_Main/test_catalog.csv",
+  "runtime_configuration": "Existing main.py test settings and common engine remain authoritative",
+  "results_directory": "D:/QTG_Test_Results/2_c_4_Steady_sideslip_directional_and_lateral_static_stability"
+}

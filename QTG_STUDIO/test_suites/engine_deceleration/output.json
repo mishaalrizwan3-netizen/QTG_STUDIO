@@ -1,0 +1,7 @@
+{
+  "test_reference": "1.f.(2)",
+  "results_directory": "D:/QTG_Test_Results/1_f_2_Engine_deceleration",
+  "artifacts": ["measured CSV", "initial-condition metadata JSON", "graphs PDF", "evaluation JSON", "run output manifest JSON"],
+  "measured_channels": ["Time (s)", "Ground Speed", "Throttle 1 Position (%)", "Engine RPM", "Propeller RPM", "Manifold Pressure", "Fuel Flow", "BRUNNER position and force"],
+  "note": "Recorded values come from P3D and CLS2Sim; this file describes outputs and does not replace measured CSV data."
+}

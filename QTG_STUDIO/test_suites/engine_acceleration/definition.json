@@ -1,0 +1,26 @@
+{
+  "reference": "1.f.(1)",
+  "title": "Engine acceleration",
+  "category": "Performance",
+  "availability": "SEP catalog test",
+  "objective": "To demonstrate that the simulated engine acceleration conforms to the validation data.",
+  "initial_conditions_catalog": "Flt cond: Approach or Landing | Alt[ft]: 2000 | IAS[kts]: 80 | Flaps: 0 | Throttle[%]: 5",
+  "default_initial_conditions": {
+    "Flt cond": "Approach or Landing",
+    "Alt[ft]": 2000,
+    "IAS[kts]": 80,
+    "Flaps": 0,
+    "Throttle[%]": 5,
+    "Latitude[deg]": 32.235,
+    "Longitude[deg]": 74.135,
+    "Temperature[C]": 15
+  },
+  "duration_seconds": 21,
+  "duration_note": "Test runs for 21 seconds total (5.0 s baseline hold + 16.0 s post-movement response).",
+  "report_format": "5-page official engine report (Page 1: Initial Conditions, Page 2: Group 1 Airspeed/Altitude, Page 3: Group 2 Throttle/RPM, Page 4: Group 3 Power/Fuel, Page 5: Ti/Tt Response Analysis)",
+  "tolerance_catalog": "± 10% Ti or ± 0.25 s | ± 10% Tt (Ti: 10% response, Tt: 90% go-around power)",
+  "reference_pdf_page": "61",
+  "definition_source": "QTG_Studio_Antigravity_Single_Main/test_catalog.csv",
+  "runtime_configuration": "Existing main.py test settings and common engine remain authoritative; changes only via test settings dialog",
+  "results_directory": "D:/QTG_Test_Results/1_f_1_Engine_acceleration"
+}

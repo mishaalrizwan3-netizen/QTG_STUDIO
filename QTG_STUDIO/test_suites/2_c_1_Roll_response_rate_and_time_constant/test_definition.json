@@ -1,0 +1,13 @@
+{
+  "reference": "2.c.(1)",
+  "title": "Roll response (rate and time constant)",
+  "category": "Lateral-Directional Handling",
+  "availability": "SEP catalog test",
+  "objective": "To demonstrate that the simulator roll-rate response to roll control input conforms to the validation data.",
+  "initial_conditions_catalog": "",
+  "tolerance_catalog": "± 10% or ± 2º/s roll rate | ± 10% or ± 0.1 s roll time constant (tau) | ± 2º bank angle",
+  "reference_pdf_page": "75",
+  "definition_source": "QTG_Studio_Antigravity_Single_Main/test_catalog.csv",
+  "runtime_configuration": "Existing main.py test settings and common engine remain authoritative",
+  "results_directory": "D:/QTG_Test_Results/2_c_1_Roll_response_rate_and_time_constant"
+}

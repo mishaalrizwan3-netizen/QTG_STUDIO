@@ -1,0 +1,13 @@
+{
+  "reference": "4.a.(1)",
+  "title": "Visual system latency / transport delay",
+  "category": "Visual System Tests",
+  "availability": "SEP catalog test",
+  "objective": "To confirm, that the cue correlation and responses of the visual and instruments are sufficient to be representative of the cues perceived in the FSTD.",
+  "initial_conditions_catalog": "",
+  "tolerance_catalog": "Visual system response within 100 ms of pilot controller displacement (transport delay <= 100 ms)",
+  "reference_pdf_page": "86",
+  "definition_source": "QTG_Studio_Antigravity_Single_Main/test_catalog.csv",
+  "runtime_configuration": "Existing main.py test settings and common engine remain authoritative",
+  "results_directory": "D:/QTG_Test_Results/4_a_1_Visual_system_latency_transport_delay"
+}

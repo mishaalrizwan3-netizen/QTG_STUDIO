@@ -1,0 +1,58 @@
+{
+  "approval_status": "DRAFT_NOT_APPROVED_DO_NOT_ACTIVATE",
+  "test_reference": "1.f.(2)",
+  "mode": "manual",
+  "review_source": "",
+  "timeout_s": null,
+  "max_age_s": null,
+  "stable_samples": 3,
+  "notice": "Inactive review artifact. Empty review_source, unresolved targets and null limits deliberately prevent execution. approval_status is documentary and is NOT enforced by the loader. Do not point an environment variable at this file.",
+  "evidence": {
+    "configured_conditions": "test_suites/engine_deceleration/initialization.json; runtime operator overrides take precedence",
+    "manual_csv": "D:/QTG_Test_Results/1_f_2_Engine_deceleration/1_f_2_Engine_deceleration_manual_2026-11-10_13-52-11.csv",
+    "manual_csv_sha256": "4769ad89ff90d4e56cf64412927a40d909f41f3d6238082bd04dc0cc10e23565",
+    "manual_sidecar": "D:/QTG_Test_Results/1_f_2_Engine_deceleration/1_f_2_Engine_deceleration_manual_2026-11-10_13-52-11_init_conditions.json",
+    "manual_sidecar_sha256": "93ad818f24ebe85eb7c9293793c264a60d6ea1d47707176ee064b8c2d7754fa1",
+    "recording_start_engine_rpm": 989.1339446217019,
+    "pre_throttle_engine_rpm_csv": 2680,
+    "phase_warning": "Recording-start observations do not establish an exact paused READY engine target. No 2700 RPM initialization command is proposed.",
+    "review_document": "docs/DECELERATION_MANUAL_PLAN_REVIEW.md"
+  },
+  "checks": {
+    "on_ground": {"value": true, "value_source": "initialization.json:on_ground", "tolerance": 0, "tolerance_source": "Proposed exact boolean equality to configured ground state; engineering approval pending"},
+    "alt_ft": {"value": 755, "value_source": "initialization.json:alt_ft, MSL", "tolerance": 25, "tolerance_source": "Existing backend/initializer.py:apply_manual_conditions and _wait_for_initial_altitude; retain unchanged, formal review confirmation pending"},
+    "ias_kt": {"value": 0, "value_source": "initialization.json:ias_kt", "tolerance": null, "tolerance_source": "UNRESOLVED: no approved Manual ground IAS readiness limit; do not reuse the legacy 35 kt Replay special case"},
+    "ground_speed": {"value": 0, "value_source": "PROPOSED stationary paused READY target; historical recording-start telemetry.ground_speed=0.008435596328608781 kt; not a configured command", "tolerance": null, "tolerance_source": "UNRESOLVED: engineering approval required; pre-event motion is permitted and is not a READY target"},
+    "lat": {"value": 32.23366667, "value_source": "initialization.json:lat", "tolerance": 0.001, "tolerance_source": "Existing backend/initializer.py:apply_manual_conditions coordinate readback limit; retention proposed for trial, engineering review required"},
+    "lon": {"value": 74.1235, "value_source": "initialization.json:lon", "tolerance": 0.001, "tolerance_source": "Existing backend/initializer.py:apply_manual_conditions coordinate readback limit; retention proposed for trial, engineering review required"},
+    "heading_deg": {"value": 48.4, "value_source": "initialization.json:heading_deg; true heading", "tolerance": null, "tolerance_source": "UNRESOLVED: a matching historical heading is not an approved tolerance"},
+    "pitch_deg": {"value": 0, "value_source": "initialization.json:pitch_deg; historical ground pitch was 0.11342389560559031 deg", "tolerance": null, "tolerance_source": "UNRESOLVED: terrain/gear settling and P3D pitch convention require review"},
+    "bank_deg": {"value": 0, "value_source": "initialization.json:bank_deg; historical ground bank was 0.0070198022075702885 deg", "tolerance": null, "tolerance_source": "UNRESOLVED: ground attitude acceptance requires review"},
+    "throttle": {"value": 100, "value_source": "initialization.json:throttle; engine throttle lever, not RPM or power", "tolerance": 1, "tolerance_source": "Existing backend/initializer.py:apply_manual_conditions, percentage points; retain unchanged, formal review confirmation pending"},
+    "engine_rpm": {"value": null, "value_source": "UNRESOLVED paused READY target; historical Manual recording-start snapshot.rpm=989.1339446217019, not pre-throttle 2680", "tolerance": null, "tolerance_source": "UNRESOLVED: registry forces 60 RPM when this check is used, although its provenance/scope is Replay-only; separate Manual engineering approval or a reviewed scope correction is required"},
+    "prop_rpm": {"value": null, "value_source": "UNRESOLVED paused READY target; use independent PROP RPM:1; historical recording-start observation approximately 989 RPM", "tolerance": null, "tolerance_source": "UNRESOLVED: no approved Manual propeller-RPM criterion; do not automatically transfer Replay 60 RPM"},
+    "mixture": {"value": 100, "value_source": "PROPOSED historical recording-start telemetry.engine_mixture_percent=100; not set by apply_manual_conditions", "tolerance": null, "tolerance_source": "UNRESOLVED: engine configuration and lever tolerance require engineering approval"},
+    "propeller_lever": {"value": 100, "value_source": "PROPOSED historical recording-start telemetry.engine_propeller_percent=100; not set by apply_manual_conditions", "tolerance": null, "tolerance_source": "UNRESOLVED: engine configuration and lever tolerance require engineering approval"},
+    "temperature_c": {"value": 15, "value_source": "initialization.json:temperature_c; measured historical OAT 15.01291561126709 C", "tolerance": 1, "tolerance_source": "PROPOSAL ONLY: existing backend/weather_verification.py diagnostic comparison limit, not approved readiness criterion"},
+    "wind_speed": {"value": 5.984132952103075, "value_source": "PROPOSED historical recording-start telemetry.ambient_wind_spd; not a Manual configured target; existing weather builder preserves current wind", "tolerance": 1, "tolerance_source": "PROPOSAL ONLY: existing weather diagnostic 1 kt comparison limit; engineering approval required"},
+    "wind_direction": {"value": 325, "value_source": "PROPOSED historical recording-start telemetry.ambient_wind_dir; preserve same SimConnect convention", "tolerance": 5, "tolerance_source": "PROPOSAL ONLY: existing weather diagnostic 5 deg circular difference; engineering approval required"},
+    "barometer": {"value": 1013, "value_source": "PROPOSED historical recording-start telemetry.baro_pressure; KOHLSMAN SETTING MB, not ambient pressure", "tolerance": 1, "tolerance_source": "PROPOSAL ONLY: existing weather diagnostic 1 hPa comparison limit; engineering approval required"},
+    "flaps": {"value": 0, "value_source": "initialization.json:flaps; genuine live FLAPS HANDLE INDEX only; reject historical alias value 1", "tolerance": 0.1, "tolerance_source": "Existing registry limit from apply_manual_conditions; genuine handle is discrete so only index 0 matches; Manual legacy UP check was skipped, engineering approval of this added verification required"}
+  },
+  "exclusions": {
+    "manifold_pressure": "PROPOSED TRIAL-ONLY EXCLUSION: native measurement is available, but historical 6.611620148988236 psi at recording start is transient, not a reviewed paused READY target. Log observed value; no power manipulation or exclusion approval implied.",
+    "weight": "PROPOSED TRIAL-ONLY EXCLUSION: historical total_weight=834.131241899414 kg; legacy native/Python cache exists but no validated correlated authoritative acquisition for this field. Operator must document simulator loading independently. Not acceptable as evidence of matched mass for a recorded test without further approval.",
+    "cg": "PROPOSED TRIAL-ONLY EXCLUSION: legacy CG PERCENT mapping exists but historical -89.98400568962097 is suspect; source meaning/decoding and freshness are unvalidated. Do not use it as a target. No validated alternative established.",
+    "elevator_trim": "PROPOSED TRIAL-ONLY EXCLUSION: historical trim_elevator_angle_rad=0, but only legacy cache supplies it; no authoritative snapshot channel or independently validated acquisition established. No trim commands added.",
+    "aileron_trim": "PROPOSED TRIAL-ONLY EXCLUSION: historical trim_aileron_percent=0, but no validated correlated authoritative measurement established. No trim commands added.",
+    "rudder_trim": "PROPOSED TRIAL-ONLY EXCLUSION: historical trim_rudder_percent=0, but no validated correlated authoritative measurement established. No trim commands added."
+  },
+  "additional_review_items_not_enforced_by_this_schema": {
+    "ambient_pressure_mb": {"reference_value": 986.0013427734375, "source": "historical telemetry.ambient_pressure_mb; live AMBIENT PRESSURE in V1", "decision": "Available measured value, but registry lacks a plan check. Approve explicit initialization-only deferral or separately review minimal registry support; do not claim it verified from barometer."},
+    "fuel_mass_kg": {"source": "legacy FUEL TOTAL QUANTITY WEIGHT/kilograms -> total_fuel_quantity", "decision": "No authoritative V1 field or validated independent alternative established; explicit trial-only deferral requires approval."},
+    "density_and_local_airflow": {"source": "legacy cache only; not in V1", "decision": "No new ground airflow recovery requirement inferred; explicit diagnostic-only scope/deferral requires review."},
+    "brunner_physical_positions": {"source": "serialized strict direct read_axis on existing connection; independent of simulator controls", "decision": "Existing finite pitch/roll/rudder readbacks and ownership-conflict rejection remain compulsory. No reviewed Manual physical target is established; no hold or reposition command proposed."},
+    "final_state": "Existing runtime enforces correlated running=false; no unpause or recording in this trial.",
+    "approval": "Every proposed check, target, exclusion, lifetime and freshness budget needs a named engineering review record. Extra JSON approval fields do not implement an approval gate."
+  }
+}

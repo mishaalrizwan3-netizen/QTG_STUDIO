@@ -1,0 +1,340 @@
+{
+  "approval_status": "APPROVED",
+  "test_reference": "1.f.(2)",
+  "mode": "manual",
+  "review_source": "Explicit engineering approval by mishaal in the current conversation; review decisions and limitations are recorded in this document and DECELERATION_MANUAL_DECISIONS.md.",
+  "timeout_s": 45.0,
+  "max_age_s": 1.0,
+  "stable_samples": 3,
+  "notice": "Approved by mishaal for the limited paused Manual initialization-only trial. Configuration values are resolved from GUI/file conditions. Live simulator execution requires separate authorization; this record does not activate the manager.",
+  "evidence": {
+    "configured_conditions": "test_suites/engine_deceleration/initialization.json; runtime operator overrides take precedence",
+    "manual_csv": "D:/QTG_Test_Results/1_f_2_Engine_deceleration/1_f_2_Engine_deceleration_manual_2026-11-10_13-52-11.csv",
+    "manual_csv_sha256": "4769ad89ff90d4e56cf64412927a40d909f41f3d6238082bd04dc0cc10e23565",
+    "manual_sidecar": "D:/QTG_Test_Results/1_f_2_Engine_deceleration/1_f_2_Engine_deceleration_manual_2026-11-10_13-52-11_init_conditions.json",
+    "manual_sidecar_sha256": "93ad818f24ebe85eb7c9293793c264a60d6ea1d47707176ee064b8c2d7754fa1",
+    "recording_start_engine_rpm": 989.1339446217019,
+    "pre_throttle_engine_rpm_csv": 2680,
+    "phase_warning": "Recording-start observations do not establish an exact paused READY engine target. No 2700 RPM initialization command is proposed.",
+    "review_document": "docs/INITIALIZATION_PLAN_SAFETY.md; docs/DECELERATION_MANUAL_DECISIONS.md",
+    "automatic_supporting_csv": "D:/QTG_Test_Results/1_f_2_Engine_deceleration/1_f_2_Engine_deceleration_auto_2026-11-11_10-50-13.csv",
+    "automatic_supporting_csv_sha256": "d1027be08382f988575bfd1c199729c68b18ba449cdd0b460f60f8d9d171d80a",
+    "identity_note": "Operator-selected wind/QNH and stationary ground-speed keys now resolve from existing initialization.json. Current review identity only; no approval issued. Stage 1 is historical evidence, not a target source.",
+    "source_catalog": [
+      "test_suites/engine_deceleration/initialization.json",
+      "backend/initializer.py:apply_manual_conditions",
+      "backend/weather_verification.py:CHANNELS (diagnostic limits only)",
+      "interfaces/brunner_base/src/verification_snapshot.py:CHANNELS",
+      "backend/initialization_requirements.py",
+      "backend/engine_initialization_adapter.py",
+      "docs/INITIALIZATION_PLAN_SAFETY.md",
+      "docs/DECELERATION_MANUAL_PLAN_REVIEW.md (historical engineering observations; software limitations superseded by Stage 5J)",
+      "docs/ENGINE_UNIVERSAL_INITIALIZATION_ROLLOUT.md (Stage 5J contract takes precedence)"
+    ],
+    "stage1_directory": "D:\\QTG_Test_Results\\sessions\\p3d_verification\\434b7e866dbc4aba8624ab3a941ff64a",
+    "stage1_artifacts": {
+      "measurements.csv": {
+        "path": "D:\\QTG_Test_Results\\sessions\\p3d_verification\\434b7e866dbc4aba8624ab3a941ff64a\\measurements.csv",
+        "sha256": "265d2a4002a55a6b83bd6d25476cf2787ec40f02f64649860a8f0970463b2dd2"
+      },
+      "summary.json": {
+        "path": "D:\\QTG_Test_Results\\sessions\\p3d_verification\\434b7e866dbc4aba8624ab3a941ff64a\\summary.json",
+        "sha256": "f4c03f47f7637fdadd5f45037266334d5f2e106dfe154eaa07d990f014af5ce4"
+      },
+      "configured_vs_actual.csv": {
+        "path": "D:\\QTG_Test_Results\\sessions\\p3d_verification\\434b7e866dbc4aba8624ab3a941ff64a\\configured_vs_actual.csv",
+        "sha256": "7c6aea0d38f37da720ebc869a43da862a81330a1d92f149c475b6653008e137c"
+      },
+      "worker_status_before.json": {
+        "path": "D:\\QTG_Test_Results\\sessions\\p3d_verification\\434b7e866dbc4aba8624ab3a941ff64a\\worker_status_before.json",
+        "sha256": "ee14f48b5c2513393c63f83948fcb42a37a823b24bbcb924e97762188d2c9ec3"
+      },
+      "worker_status_after.json": {
+        "path": "D:\\QTG_Test_Results\\sessions\\p3d_verification\\434b7e866dbc4aba8624ab3a941ff64a\\worker_status_after.json",
+        "sha256": "4c9209c9cf776c4345302b608e77afdcb9d41ce72527231e21a5ede34c3e9284"
+      },
+      "worker_context.json": {
+        "path": "D:\\QTG_Test_Results\\sessions\\p3d_verification\\434b7e866dbc4aba8624ab3a941ff64a\\worker_context.json",
+        "sha256": "26c7bf7624435d44b0cfd96e99d30182e053510f8282e92d1e5191a5aa517536"
+      },
+      "observation_report.json": {
+        "path": "D:\\QTG_Test_Results\\sessions\\p3d_verification\\434b7e866dbc4aba8624ab3a941ff64a\\observation_report.json",
+        "sha256": "47647bcb2c464763c7916467b6a6b99b4c0848a98e836769a02c6f869d9db532"
+      }
+    }
+  },
+  "checks": {
+    "on_ground": {
+      "target_source": "resolved_initial_conditions",
+      "tolerance": 0.0,
+      "tolerance_source": "Approved by mishaal for limited initialization-only trial; see engineering_decision and decision sheet. Existing preparation checks and registry constraints remain unchanged.",
+      "review_status": "APPROVED_FOR_LIMITED_INITIALIZATION_ONLY_TRIAL"
+    },
+    "alt_ft": {
+      "target_source": "resolved_initial_conditions",
+      "tolerance": 25.0,
+      "tolerance_source": "Approved by mishaal for limited initialization-only trial; see engineering_decision and decision sheet. Existing preparation checks and registry constraints remain unchanged.",
+      "review_status": "APPROVED_FOR_LIMITED_INITIALIZATION_ONLY_TRIAL"
+    },
+    "ias_kt": {
+      "target_source": "resolved_initial_conditions",
+      "tolerance": 0.5,
+      "tolerance_source": "Approved by mishaal for limited initialization-only trial; see engineering_decision and decision sheet. Existing preparation checks and registry constraints remain unchanged.",
+      "review_status": "APPROVED_FOR_LIMITED_INITIALIZATION_ONLY_TRIAL"
+    },
+    "ground_speed": {
+      "target_source": "resolved_initial_conditions",
+      "tolerance": 0.5,
+      "tolerance_source": "Approved by mishaal for limited initialization-only trial; see engineering_decision and decision sheet. Existing preparation checks and registry constraints remain unchanged.",
+      "review_status": "APPROVED_FOR_LIMITED_INITIALIZATION_ONLY_TRIAL"
+    },
+    "lat": {
+      "target_source": "resolved_initial_conditions",
+      "tolerance": 0.001,
+      "tolerance_source": "Approved by mishaal for limited initialization-only trial; see engineering_decision and decision sheet. Existing preparation checks and registry constraints remain unchanged.",
+      "review_status": "APPROVED_FOR_LIMITED_INITIALIZATION_ONLY_TRIAL"
+    },
+    "lon": {
+      "target_source": "resolved_initial_conditions",
+      "tolerance": 0.001,
+      "tolerance_source": "Approved by mishaal for limited initialization-only trial; see engineering_decision and decision sheet. Existing preparation checks and registry constraints remain unchanged.",
+      "review_status": "APPROVED_FOR_LIMITED_INITIALIZATION_ONLY_TRIAL"
+    },
+    "heading_deg": {
+      "target_source": "resolved_initial_conditions",
+      "tolerance": 5.0,
+      "tolerance_source": "Approved by mishaal for limited initialization-only trial; see engineering_decision and decision sheet. Existing preparation checks and registry constraints remain unchanged.",
+      "review_status": "APPROVED_FOR_LIMITED_INITIALIZATION_ONLY_TRIAL"
+    },
+    "pitch_deg": {
+      "target_source": "resolved_initial_conditions",
+      "tolerance": 2.0,
+      "tolerance_source": "Approved by mishaal for limited initialization-only trial; see engineering_decision and decision sheet. Existing preparation checks and registry constraints remain unchanged.",
+      "review_status": "APPROVED_FOR_LIMITED_INITIALIZATION_ONLY_TRIAL"
+    },
+    "bank_deg": {
+      "target_source": "resolved_initial_conditions",
+      "tolerance": 2.0,
+      "tolerance_source": "Approved by mishaal for limited initialization-only trial; see engineering_decision and decision sheet. Existing preparation checks and registry constraints remain unchanged.",
+      "review_status": "APPROVED_FOR_LIMITED_INITIALIZATION_ONLY_TRIAL"
+    },
+    "throttle": {
+      "target_source": "resolved_initial_conditions",
+      "tolerance": 1.0,
+      "tolerance_source": "Approved by mishaal for limited initialization-only trial; see engineering_decision and decision sheet. Existing preparation checks and registry constraints remain unchanged.",
+      "review_status": "APPROVED_FOR_LIMITED_INITIALIZATION_ONLY_TRIAL"
+    },
+    "temperature_c": {
+      "target_source": "resolved_initial_conditions",
+      "tolerance": 5.0,
+      "tolerance_source": "Approved by mishaal for limited initialization-only trial; see engineering_decision and decision sheet. Existing preparation checks and registry constraints remain unchanged.",
+      "review_status": "APPROVED_FOR_LIMITED_INITIALIZATION_ONLY_TRIAL"
+    },
+    "wind_speed": {
+      "target_source": "resolved_initial_conditions",
+      "tolerance": 1.0,
+      "tolerance_source": "Approved by mishaal for limited initialization-only trial; see engineering_decision and decision sheet. Existing preparation checks and registry constraints remain unchanged.",
+      "review_status": "APPROVED_FOR_LIMITED_INITIALIZATION_ONLY_TRIAL"
+    },
+    "barometer": {
+      "target_source": "resolved_initial_conditions",
+      "tolerance": 1.0,
+      "tolerance_source": "Approved by mishaal for limited initialization-only trial; see engineering_decision and decision sheet. Existing preparation checks and registry constraints remain unchanged.",
+      "review_status": "APPROVED_FOR_LIMITED_INITIALIZATION_ONLY_TRIAL"
+    },
+    "flaps": {
+      "target_source": "resolved_initial_conditions",
+      "tolerance": 0.1,
+      "tolerance_source": "Approved by mishaal for limited initialization-only trial; see engineering_decision and decision sheet. Existing preparation checks and registry constraints remain unchanged.",
+      "review_status": "APPROVED_FOR_LIMITED_INITIALIZATION_ONLY_TRIAL"
+    }
+  },
+  "exclusions": {
+    "engine_rpm": "PROPOSED PAUSED-MANUAL EXCLUSION, REQUIRES APPROVAL: no fixed shaft-RPM target is defined for this phase. Stage 1 measured 0 RPM while paused. Keep this shaft visible diagnostically; do not infer engine-off/on readiness or substitute recording-start/pre-throttle targets. Recorded Replay RPM preparation and matching remain unchanged.",
+    "prop_rpm": "PROPOSED PAUSED-MANUAL EXCLUSION, REQUIRES APPROVAL: no fixed shaft-RPM target is defined for this phase. Stage 1 measured 0 RPM while paused. Keep this shaft visible diagnostically; do not infer engine-off/on readiness or substitute recording-start/pre-throttle targets. Recorded Replay RPM preparation and matching remain unchanged.",
+    "manifold_pressure": "PROPOSED TRIAL-ONLY EXCLUSION: native measurement is available, but historical 6.611620148988236 psi at recording start is transient, not a reviewed paused READY target. Log observed value; no power manipulation or exclusion approval implied.",
+    "mixture": "PROPOSED INITIALIZATION-ONLY EXCLUSION, REQUIRES APPROVAL: no target is defined in current GUI/resolved configuration and existing Manual preparation does not command this lever. Stage 1 measured 100%, which is observation only. If judged mandatory, explicitly configure an approved target and tolerance before using a check.",
+    "propeller_lever": "PROPOSED INITIALIZATION-ONLY EXCLUSION, REQUIRES APPROVAL: no target is defined in current GUI/resolved configuration and existing Manual preparation does not command this lever. Stage 1 measured 100%, which is observation only. If judged mandatory, explicitly configure an approved target and tolerance before using a check.",
+    "weight": "PROPOSED TRIAL-ONLY EXCLUSION: historical total_weight=834.131241899414 kg; legacy native/Python cache exists but no validated correlated authoritative acquisition for this field. Operator must document simulator loading independently. Not acceptable as evidence of matched mass for a recorded test without further approval.",
+    "cg": "PROPOSED TRIAL-ONLY EXCLUSION: legacy CG PERCENT mapping exists but historical -89.98400568962097 is suspect; source meaning/decoding and freshness are unvalidated. Do not use it as a target. No validated alternative established.",
+    "elevator_trim": "PROPOSED TRIAL-ONLY EXCLUSION: historical trim_elevator_angle_rad=0, but only legacy cache supplies it; no authoritative snapshot channel or independently validated acquisition established. No trim commands added.",
+    "aileron_trim": "PROPOSED TRIAL-ONLY EXCLUSION: historical trim_aileron_percent=0, but no validated correlated authoritative measurement established. No trim commands added.",
+    "rudder_trim": "PROPOSED TRIAL-ONLY EXCLUSION: historical trim_rudder_percent=0, but no validated correlated authoritative measurement established. No trim commands added.",
+    "wind_direction": "Conditional Manual-only exclusion: direction is not applicable when the immutable resolved wind_speed target is exactly zero. Wind-speed verification remains mandatory. Nonzero or missing speed cannot use this exclusion. Requires explicit engineering approval."
+  },
+  "additional_review_items_not_enforced_by_this_schema": {
+    "ambient_pressure_mb": {
+      "reference_value": 986.0013427734375,
+      "source": "historical telemetry.ambient_pressure_mb; live AMBIENT PRESSURE in V1",
+      "decision": "Stage 1 validated AMBIENT PRESSURE readback at 986.0013427734375 mbar, but no configured target/band or registry plan gate exists. Approve observation-only deferral for this trial or block if mandatory; barometer does not substitute."
+    },
+    "fuel_mass_kg": {
+      "source": "legacy FUEL TOTAL QUANTITY WEIGHT/kilograms -> total_fuel_quantity",
+      "decision": "No authoritative V1 field or validated independent alternative established; explicit trial-only deferral requires approval."
+    },
+    "density_and_local_airflow": {
+      "source": "legacy cache only; not in V1",
+      "decision": "No new ground airflow recovery requirement inferred; explicit diagnostic-only scope/deferral requires review."
+    },
+    "brunner_physical_positions": {
+      "source": "serialized strict direct read_axis on existing connection; independent of simulator controls",
+      "decision": "Existing finite pitch/roll/rudder readbacks and ownership-conflict rejection remain compulsory. No reviewed Manual physical target is established; no hold or reposition command proposed."
+    },
+    "final_state": "Existing runtime enforces correlated running=false; no unpause or recording in this trial.",
+    "approval": "Reviewer mishaal explicitly approved the four diagnostic deferrals for this limited trial; these fields remain observations and are not enforced gates."
+  },
+  "approval": {
+    "status": "APPROVED",
+    "reviewer": "mishaal",
+    "reviewed_at": "2026-11-12T10:53:22+05:00",
+    "record": "Explicit user approval by mishaal, recorded 2026-11-12T10:53:22+05:00; verbatim decision stored in engineering_decision of this plan.",
+    "approved_checks": [
+      "alt_ft",
+      "bank_deg",
+      "barometer",
+      "flaps",
+      "ground_speed",
+      "heading_deg",
+      "ias_kt",
+      "lat",
+      "lon",
+      "on_ground",
+      "pitch_deg",
+      "temperature_c",
+      "throttle",
+      "wind_speed"
+    ],
+    "approved_exclusions": [
+      "aileron_trim",
+      "cg",
+      "elevator_trim",
+      "engine_rpm",
+      "manifold_pressure",
+      "mixture",
+      "prop_rpm",
+      "propeller_lever",
+      "rudder_trim",
+      "weight",
+      "wind_direction"
+    ],
+    "payload_sha256": "21b1cc562a49b17cb5a237ec83940088b5ae8aed283d6c092cdb4fdc27186264"
+  },
+  "configuration_identity": {
+    "source_sha256": "a241a32dbedf3b6555fc993e0c4cea45caeb1791318c409007d383c5c8aeef88",
+    "resolved_sha256": "c44d7f105bfe481bd7bd4ca8c6c16d27d64d937e57cece60738cca4c48d8c62f",
+    "overrides_sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+    "weather_overrides_sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+  },
+  "readiness_phase": "Final paused state after the unchanged Manual preparation and before recording timer, reference capture, unpause or throttle-reduction event.",
+  "approval_matrix": "docs/DECELERATION_MANUAL_APPROVAL_MATRIX.csv",
+  "decision_sheet": "docs/DECELERATION_MANUAL_DECISIONS.md",
+  "live_checklist": "docs/DECELERATION_MANUAL_SUPERVISED_CHECKLIST.md",
+  "phase_evidence": {
+    "interpretation": "Recorded phase observations only; neither establishes the earlier final paused READY target. Preserve the successful engine preparation and full recording timeline.",
+    "manual": {
+      "first_csv_sample_time_s": 0.0896963,
+      "first_csv_engine_rpm": 989,
+      "first_csv_prop_rpm": 989,
+      "first_csv_ground_speed_kt": 0.01,
+      "first_csv_ias_kt": 0.01,
+      "last_pre_throttle_sample_time_s": 5.4720133,
+      "measured_throttle_onset_s": 5.472410994,
+      "pre_throttle_engine_rpm": 2680,
+      "pre_throttle_prop_rpm": 2680,
+      "pre_throttle_ground_speed_kt": 3.14,
+      "pre_throttle_ias_kt": 3.47
+    },
+    "supporting_automatic": {
+      "first_csv_engine_rpm": 987,
+      "first_csv_prop_rpm": 987,
+      "first_csv_ground_speed_kt": 0.01,
+      "first_csv_ias_kt": 0.68,
+      "measured_throttle_onset_s": 5.403673434,
+      "pre_throttle_engine_rpm": 2681,
+      "pre_throttle_prop_rpm": 2681,
+      "pre_throttle_ground_speed_kt": 3.11,
+      "pre_throttle_ias_kt": 3.75,
+      "selected_manual_reference": "1_f_2_Engine_deceleration_manual_2026-11-10_13-52-11.csv"
+    }
+  },
+  "manual_policy": {
+    "status": "CONFIGURED",
+    "preparation": "existing_manual",
+    "mandatory_checks": [
+      "alt_ft",
+      "bank_deg",
+      "barometer",
+      "flaps",
+      "ground_speed",
+      "heading_deg",
+      "ias_kt",
+      "lat",
+      "lon",
+      "on_ground",
+      "pitch_deg",
+      "temperature_c",
+      "throttle",
+      "wind_direction",
+      "wind_speed"
+    ],
+    "physical_controls": "read_only",
+    "stability": {
+      "kind": "paused_state",
+      "source": "Approved by mishaal for limited paused initialization-only trial; three fresh matching responses do not establish running stabilization."
+    },
+    "wind_direction_applicability": {
+      "kind": "not_applicable_when_configured_calm",
+      "source": "Approved by mishaal for configured wind speed exactly zero, with wind-speed verification retained at approved tolerance; limited Manual trial."
+    }
+  },
+  "stage2_pending_decisions": {
+    "all_status": "Historical review notes; final limited-trial decisions explicitly approved by mishaal in engineering_decision. Live execution still requires separate authorization.",
+    "configuration_targets": {},
+    "weather_application": "Existing Manual preparation sets temperature but preserves current wind and pressure. Optional file-backed target keys are already resolved for verification; they add no weather-setting commands. Approved operator weather setup must establish intended conditions before preparation. No code change is proposed here.",
+    "calm_wind_direction": "Approved by mishaal: direction excluded only for exact configured calm; wind speed remains mandatory and tolerance permits measured values up to 1 kt.",
+    "mandatory_scope": "Approved 14 checks and 11 exclusions for limited paused initialization-only trial; paused engine and propeller RPM diagnostic only.",
+    "freshness": "Approved maximum native receipt age 1 second and three matching fresh responses; receipt age is not simulator internal sensor age.",
+    "initialization_deadline": "Approved 45-second overall attempt deadline for this trial. It is a proposed source-budget estimate, not a hard-real-time guarantee; local timeouts remain in force. Record observed timing during any separately authorized live trial.",
+    "ground_attitude_options": "Approved heading +/-5 degrees, pitch +/-2 degrees and bank +/-2 degrees for this limited trial.",
+    "stationary_options": "Approved IAS and ground speed +/-0.5 kt around current configured targets for this limited trial.",
+    "configuration_measurements": "Reviewer accepts operator-reported weight, CG, fuel and trim setup checks as sufficient for limited trial and approved individual exclusions and four diagnostic deferrals; no new measurement is implied.",
+    "brunner": "Stage 1 confirms a socket-connected status, not physical ownership or authoritative position freshness. Existing live adapter must reject competing controllers and receive finite strict direct pitch/roll/rudder readbacks. No historical axis target is invented.",
+    "initialization_only": "Require QTG_UNIVERSAL_INITIALIZATION_ONLY=1 and only the Deceleration Manual mapping; both engine switches off and Automatic mapping empty. Runtime must show recording=false, samples=0 and can_record=false even after READY.",
+    "weather_selection": "Operator selected wind_speed=0 kt and barometer=1013 hPa in existing configuration; temperature remains 15 C. No direction target is fabricated. Existing preparation preserves simulator wind/QNH: approved operator setup must establish these conditions.",
+    "ground_speed": "Configured target 0 kt; +/-0.5 kt approved for this limited trial.",
+    "approval_remaining": "None for the explicitly reviewed limited trial; manager preflight remains mandatory and live authorization is separate."
+  },
+  "operator_setup_evidence": {
+    "source": "Operator statements and explicit approval by mishaal in current conversation; no independent files or aircraft title provided.",
+    "statement": "I have checked the aircraft weight, CG, fuel and trim settings and consider the setup satisfactory.",
+    "covers": [
+      "weight",
+      "cg",
+      "fuel",
+      "elevator_trim",
+      "aileron_trim",
+      "rudder_trim"
+    ],
+    "limitations": "Operator-reported setup evidence accepted by reviewer for this limited trial; numeric settings, aircraft title and independent corroboration not supplied. This is not native verification.",
+    "mixture": "Operator reports the aircraft identification and mixture-control checks completed; no independent setting value or aircraft title supplied.",
+    "propeller_lever": "Operator reports the propeller-control checks completed; separate physical lever presence and setting were not independently established in this record."
+  },
+  "trial_limit_compatibility_blockers": {
+    "status": "Previously identified tolerance conflicts resolved by selecting supported altitude, throttle and flap limits; approved by mishaal for this limited trial."
+  },
+  "engineering_decision": {
+    "reviewer": "mishaal",
+    "recorded_at": "2026-11-12T10:53:22+05:00",
+    "source": "Explicit user approval in current conversation",
+    "verbatim_statement": "I, mishaal, approve the complete Engine Deceleration Manual initialization-only trial plan for internal engineering testing. I explicitly approve all 14 verification checks and their agreed tolerances, the three-response requirement, 1-second freshness limit and 45-second deadline. I individually approve all 11 exclusions and all four diagnostic deferrals exactly as listed in the consolidated approval record, for this paused initialization-only trial. I accept the completed aircraft identification, mixture, propeller-control, weight, CG, fuel and trim checks as operator-reported evidence sufficient for this limited trial.",
+    "scope": "Engine Deceleration 1.f.(2) Manual, paused initialization-only; internal engineering trial, not qualification or approval to execute live",
+    "approved_deferrals": [
+      "fuel",
+      "ambient pressure",
+      "indicated altitude",
+      "density/local airflow"
+    ],
+    "operator_evidence": "Reviewer accepts completed aircraft identification, mixture, propeller-control, weight, CG, fuel and trim checks as operator-reported evidence for this limited trial. Aircraft title and numeric settings were not supplied in the conversation and are not represented as independently verified.",
+    "execution_authorization": "Separate explicit live authorization required."
+  }
+}

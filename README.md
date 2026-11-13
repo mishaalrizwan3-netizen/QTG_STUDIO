@@ -1,5 +1,9 @@
 # QTG Studio workspace
 
+The current application snapshot is in [`QTG_STUDIO/`](QTG_STUDIO/). See
+[`QTG_STUDIO/README_GITHUB.md`](QTG_STUDIO/README_GITHUB.md) for setup, password
+configuration and development notes. The older workspace below is retained.
+
 The source application is `QTG_Studio_Antigravity_Single_Main/main.py`.
 Run `python QTG_Studio_Antigravity_Single_Main/main.py` from this folder to use current source changes.
 `RUN_QTG.bat` prefers an existing EXE, which may be older than the source.

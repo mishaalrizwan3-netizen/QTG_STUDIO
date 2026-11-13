@@ -1,0 +1,8 @@
+{
+  "test_reference": "1.f.(2)",
+  "initialization_file": "initialization.json",
+  "duration_seconds": 21,
+  "manual_reference_required_for_automatic": true,
+  "automatic_control_method": "replay",
+  "operator_overrides_source": "password-protected Test settings"
+}

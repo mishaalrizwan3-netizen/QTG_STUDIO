@@ -1,0 +1,13 @@
+{
+  "reference": "2.b.(2)",
+  "title": "Stick force per g -- normal and accelerated turning",
+  "category": "Longitudinal Handling",
+  "availability": "SEP catalog test",
+  "objective": "To demonstrate that the simulation of manoeuvring stability, normally measured as stick force per “g” conforms to the validation data.",
+  "initial_conditions_catalog": "",
+  "tolerance_catalog": "± 1.3 daN (3 lbs) or ± 10% stick force | ± 1.5 cm (0.6 in) or ± 10% column position | ± 0.1 g normal acceleration",
+  "reference_pdf_page": "69",
+  "definition_source": "QTG_Studio_Antigravity_Single_Main/test_catalog.csv",
+  "runtime_configuration": "Existing main.py test settings and common engine remain authoritative",
+  "results_directory": "D:/QTG_Test_Results/2_b_2_Stick_force_per_g_normal_and_accelerated_turning"
+}
